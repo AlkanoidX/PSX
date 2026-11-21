@@ -12,11 +12,19 @@
 //   jaquette: (optionnel) image du boîtier dans le dépôt PSX_DEPOT, ex. "DRV/cover.jpg" (jaquette IGDB du jeu PS1)
 window.PSX_JEUX = [
 	{ id: "SDW", titre: "Sheep, Dog 'n' Wolf", serial: "SLES_02895", annee: 2001, editeur: "Infogrames", genre: "Plates-formes", couleur: "#d9a21b", bios: "scph1001-us.bin", disque: "SDW/chd/", jaquette: "SDW/cover.jpg" },
-	{ id: "DRV", titre: "Driver", serial: "SLES_01816", annee: 1999, editeur: "GT Interactive", genre: "Course / poursuite", couleur: "#b8322a", bios: "scph1001-us.bin", disque: "DRV/chd/", jaquette: "DRV/cover.jpg" }
+	{ id: "DRV", titre: "Driver", serial: "SLES_01816", annee: 1999, editeur: "GT Interactive", genre: "Course / poursuite", couleur: "#b8322a", bios: "scph1001-us.bin", disque: "DRV/chd/", jaquette: "DRV/cover.jpg" },
+	{ id: "CB1", titre: "Crash Bandicoot", serial: "SCES_00344", annee: 1996, editeur: "Sony Computer Entertainment", genre: "Plates-formes", couleur: "#e8731c", bios: "scph1001-us.bin", disque: "CB1/chd/", jaquette: "CB1/cover.jpg" },
+	{ id: "CB2", titre: "Crash Bandicoot 2: Cortex Strikes Back", serial: "SCES_00967", annee: 1997, editeur: "Sony Computer Entertainment", genre: "Plates-formes", couleur: "#d4511e", bios: "scph1001-us.bin", disque: "CB2/chd/", jaquette: "CB2/cover.jpg" },
+	{ id: "CB3", titre: "Crash Bandicoot 3: Warped", serial: "SCES_01420", annee: 1998, editeur: "Sony Computer Entertainment", genre: "Plates-formes", couleur: "#c23b22", bios: "scph1001-us.bin", disque: "CB3/chd/", jaquette: "CB3/cover.jpg" },
+	{ id: "CBH", titre: "Crash Bash", serial: "SCUS_94570", annee: 2000, editeur: "Sony Computer Entertainment", genre: "Party / multijoueur", couleur: "#2f7fd1", bios: "scph1001-us.bin", disque: "CBH/chd/", jaquette: "CBH/cover.jpg" },
+	{ id: "SYD", titre: "Spyro: Year of the Dragon", serial: "SCES_02835", annee: 2000, editeur: "Sony Computer Entertainment", genre: "Plates-formes", couleur: "#7a3fb5", bios: "scph1001-us.bin", disque: "SYD/chd/", jaquette: "SYD/cover.jpg" },
+	{ id: "TR", titre: "Tomb Raider", serial: "SLES_00024", annee: 1996, editeur: "Eidos Interactive", genre: "Action / aventure", couleur: "#8a6a3b", bios: "scph1001-us.bin", disque: "TR/chd/", jaquette: "TR/cover.jpg" },
+	{ id: "DC", titre: "Dino Crisis", serial: "SLES_02207", annee: 1999, editeur: "Capcom", genre: "Survival horror", couleur: "#4f7a2a", bios: "scph1001-us.bin", disque: "DC/chd/", jaquette: "DC/cover.jpg" },
+	{ id: "YFM", titre: "Yu-Gi-Oh! Forbidden Memories", serial: "SLES_03947", annee: 2002, editeur: "Konami", genre: "Cartes / stratégie", couleur: "#b08a1e", bios: "scph1001-us.bin", disque: "YFM/chd/", jaquette: "YFM/cover.jpg" }
 ];
 
 // Bump with the ?v= stamps in index.html and jeu.html whenever a site or patched EmulatorJS file changes.
-window.PSX_VERSION = "20261121e";
+window.PSX_VERSION = "20261121f";
 
 // PS1 disc repo: one folder per game (its initials), read straight from GitHub (CORS allowed).
 window.PSX_DEPOT = "https://raw.githubusercontent.com/AlkanoidX/ps1/main/";
