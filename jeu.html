@@ -68,14 +68,18 @@
 		function statut(t) { afficher("zone-statut"); $("zone-statut").textContent = t; }
 		function demanderDisque(erreur) { afficher("zone-disque"); $("erreur").textContent = erreur || ""; $("choisir").focus(); }
 
-		// BIOS posé sur le serveur (PSX_BIOS dans jeux.js), pour tous les jeux. Absent : BIOS simulé du cœur.
+		// BIOS du serveur choisi selon la région du jeu (PSX_biosDuJeu dans jeux.js). Aucun : BIOS simulé du cœur.
 		async function biosServeur() {
-			try {
-				var r = await fetch(PSX_BIOS, { cache: "force-cache" });
-				if (!r.ok) return null;
-				var b = await r.blob();
-				return b.size === TAILLE_BIOS ? b : null;
-			} catch (e) { return null; }
+			var liste = PSX_biosDuJeu(jeu);
+			for (var i = 0; i < liste.length; i++) {
+				try {
+					var r = await fetch(liste[i], { cache: "force-cache" });
+					if (!r.ok) continue;
+					var b = await r.blob();
+					if (b.size === TAILLE_BIOS) return b;
+				} catch (e) {}
+			}
+			return null;
 		}
 
 		async function demarrer() {
@@ -99,6 +103,9 @@
 			window.EJS_color = jeu.couleur;
 			window.EJS_backgroundColor = "#000000";
 			window.EJS_defaultOptions = { "save-save-interval": "30" };
+			// Menu du jeu : export/import de sauvegarde, états, remappage manette/clavier ("Control Settings").
+			// "Exit Emulation" laisserait un écran noir : on revient au catalogue avec le bouton dédié.
+			window.EJS_Buttons = { exitEmulation: false, cacheManager: false, netplay: false };
 			window.EJS_DEBUG_XX = true;            // charge data/src/*.js (pas de build minifié)
 			window.EJS_ready = function () {
 				$("ecran").hidden = true; document.body.classList.add("en-jeu");

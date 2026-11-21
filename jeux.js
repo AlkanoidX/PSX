@@ -3,16 +3,33 @@
 //   id      : ce qu'on met dans l'URL (?id), initiales en capitales
 //   serial  : identifiant du disque (volume ID, ex. SLES_01816) pour vérifier que le joueur charge le bon jeu
 //   couleur : couleur de la carte dans le catalogue
+//   bios    : fichier BIOS à utiliser pour ce jeu (dans bios/), chargé automatiquement
 //   jaquette: (optionnel) chemin d'une image dans le dossier, ex. "jaquettes/DRV.jpg"
 window.PSX_JEUX = [
-	{ id: "SDW", titre: "Sheep, Dog 'n' Wolf", serial: "SLES_02895", annee: 2001, editeur: "Infogrames", genre: "Plates-formes", couleur: "#d9a21b" },
-	{ id: "DRV", titre: "Driver", serial: "SLES_01816", annee: 1999, editeur: "GT Interactive", genre: "Course / poursuite", couleur: "#b8322a" }
+	{ id: "SDW", titre: "Sheep, Dog 'n' Wolf", serial: "SLES_02895", annee: 2001, editeur: "Infogrames", genre: "Plates-formes", couleur: "#d9a21b", bios: "scph1001-us.bin" },
+	{ id: "DRV", titre: "Driver", serial: "SLES_01816", annee: 1999, editeur: "GT Interactive", genre: "Course / poursuite", couleur: "#b8322a", bios: "scph1001-us.bin" }
 ];
 
-// BIOS PS1 sur le serveur (512 Ko, ex. SCPH-1001 / SCPH-5502). S'il est présent, il sert pour tous les jeux
-// et le joueur n'a rien à fournir. Absent : PCSX-ReARMed utilise son BIOS simulé (moins compatible :
-// Driver par exemple se bloque à « Checking MEMORY CARDS » sans vrai BIOS).
-window.PSX_BIOS = "bios/scph5501.bin";
+// BIOS PS1 posés sur le serveur dans bios/ (512 Ko chacun).
+// Chaque jeu note son BIOS (champ bios) ; il est chargé automatiquement. Sans champ : BIOS de sa région.
+// Les autres servent de secours si le fichier manque. Aucun BIOS : BIOS simulé du cœur (moins compatible).
+// Testés : scph1001-us = le plus compatible (Driver OK) ; scph7502-eu = écran noir sur Driver.
+window.PSX_DOSSIER_BIOS = "bios/";
+window.PSX_BIOS_REGION = { EU: "scph1001-us.bin", US: "scph1001-us.bin", JP: "scph5500-jp.bin" };
+window.PSX_BIOS_SECOURS = ["scph1001-us.bin", "scph7003.bin", "scph7502-eu.bin", "scph5500-jp.bin"];
+
+window.PSX_regionDuJeu = function (jeu) {
+	var p = jeu.serial.slice(0, 4);
+	if (/^S[CL]E[SD]$/.test(p)) return "EU";
+	if (/^S[CILP]P[SM]$/.test(p)) return "JP";
+	return "US";
+};
+
+// Chemins des BIOS à essayer pour ce jeu, dans l'ordre.
+window.PSX_biosDuJeu = function (jeu) {
+	var noms = [jeu.bios || PSX_BIOS_REGION[PSX_regionDuJeu(jeu)]].concat(PSX_BIOS_SECOURS);
+	return noms.filter(function (n, i) { return noms.indexOf(n) === i; }).map(function (n) { return PSX_DOSSIER_BIOS + n; });
+};
 
 window.PSX_trouverJeu = function (id) {
 	id = String(id || "").toUpperCase();
