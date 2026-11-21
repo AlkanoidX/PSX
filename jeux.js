@@ -66,5 +66,7 @@ window.PSX_idDansUrl = function () {
 	var q = location.search.replace(/^\?/, "");
 	if (!q) return "";
 	var m = q.match(/(?:^|&)jeu=([^&]+)/i);
-	return decodeURIComponent(m ? m[1] : q.split("&")[0]).toUpperCase();
+	if (m) return decodeURIComponent(m[1]).toUpperCase();
+	var premier = q.split("&")[0];
+	return premier.indexOf("=") < 0 ? decodeURIComponent(premier).toUpperCase() : ""; // ?lang=fr n'est pas un jeu
 };

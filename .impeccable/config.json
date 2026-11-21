@@ -1,0 +1,26 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "dark-glow",
+        "value": "*",
+        "files": [
+          "index.html"
+        ],
+        "createdAt": "2026-11-21T09:34:51.021Z",
+        "reason": "PlayTab charter D:/PS2 RECOMP/PAGE_DESIGN.md section 4.1 mandates the green focus halo (frozen design reference the user requires)"
+      },
+      {
+        "rule": "dark-glow",
+        "value": "*",
+        "files": [
+          "jeu.html"
+        ],
+        "createdAt": "2026-11-21T09:36:55.527Z",
+        "reason": "PlayTab charter D:/PS2 RECOMP/PAGE_DESIGN.md sections 4.1/4.4/5.1 mandate the green focus halo, glowing progress bar and title text-shadow (frozen design reference the user requires)"
+      }
+    ]
+  }
+}
