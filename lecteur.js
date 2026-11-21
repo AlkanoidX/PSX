@@ -10,7 +10,8 @@
 	var TACTILE = matchMedia("(pointer: coarse)").matches;
 	var TAILLE_BIOS = 512 * 1024, TAILLE_CARTE = 128 * 1024;
 	var disque = null, bios = null, biosNom = "", emu = null, enJeu = false, menuOuvert = false;
-	var distant = !!jeu.disque;   // adresse du disque (.cue ou .bin) dans jeux.js : le joueur n'a rien à fournir
+	var distant = !!jeu.disque;   // disc folder in the GitHub repo (jeux.js): the player has nothing to provide
+	var manifeste = null;         // its disc.json: { name, size, piece, pieces }
 	function tailleMo() { return disque ? PT.nombre(disque.size / 1048576, 0) : "…"; }
 
 	document.title = jeu.titre;
@@ -85,7 +86,13 @@
 		// Le cœur et le BIOS se chargent pendant qu'on lit le disque mémorisé.
 		var coeur = fetch("data/cores/pcsx_rearmed-wasm.data").catch(function () {});
 		var b = biosServeur();
-		if (!distant) { try { disque = await PSX_lireDisque(jeu.id); } catch (e) { disque = null; } }
+		if (distant) {
+			try { manifeste = await (await fetch(dossierDistant() + "disc.json", { cache: "no-cache" })).json(); }
+			catch (e) { bios = await b; $("charge").hidden = true; return erreur("disc.json: " + e); }
+		}
+		try { disque = await PSX_lireDisque(jeu.id); } catch (e) { disque = null; }
+		// A remembered copy of a remote disc counts only if it is that exact disc.
+		if (distant && disque && (disque.size !== manifeste.size || disque.name !== manifeste.name)) disque = null;
 		bios = await b; await coeur;
 		$("charge").hidden = true;
 		if (!distant && !disque) return demanderDisque();
@@ -130,15 +137,39 @@
 		if (detail !== undefined) $("e" + n + "d").textContent = detail;
 	}
 
-	// Disque distant : le .cue liste les pistes (FILE "x.bin"), toutes chargées pour que le son CD joue.
-	async function preparerDisqueDistant() {
-		var cue = new URL(jeu.disque, location.href);
-		var externes = {};
-		if (/\.cue$/i.test(cue.pathname)) {
-			var txt = await (await fetch(cue.href)).text();
-			txt.replace(/FILE\s+"([^"]+)"/gi, function (m, nom) { externes["/" + nom] = new URL(encodeURI(nom), cue).href; return m; });
+	// Remote disc: download its pieces (4 at a time), join them in order, remember the result.
+	function dossierDistant() { return new URL(jeu.disque, PSX_DEPOT).href; }
+
+	async function telechargerDisque() {
+		var m = manifeste, morceaux = new Array(m.pieces), recus = 0, suivant = 0;
+		var barre = $("e2b"), total = PT.nombre(m.size / 1048576, 0);
+		barre.classList.remove("busy"); barre.hidden = false;
+		function progres() {
+			barre.firstElementChild.style.width = (100 * recus / m.pieces) + "%";
+			$("e2d").textContent = PT.nombre(Math.min(recus * m.piece, m.size) / 1048576, 0) + " / " + PT.t("boot2d", { size: total });
 		}
-		return { url: cue.href, externes: externes };
+		async function morceau(i) {
+			var url = dossierDistant() + String(i).padStart(5, "0") + ".bin";
+			for (var essai = 0; ; essai++) {
+				try {
+					var r = await fetch(url);
+					if (!r.ok) throw new Error(r.status + " " + url);
+					var b = await r.blob();
+					var attendu = i < m.pieces - 1 ? m.piece : m.size - m.piece * (m.pieces - 1);
+					if (b.size !== attendu) throw new Error("size " + b.size + " " + url);
+					return b;
+				} catch (e) { if (essai >= 2) throw e; }
+			}
+		}
+		async function ouvrier() {
+			while (suivant < m.pieces) { var i = suivant++; morceaux[i] = await morceau(i); recus++; progres(); }
+		}
+		progres();
+		await Promise.all([ouvrier(), ouvrier(), ouvrier(), ouvrier()]);
+		barre.classList.add("busy");
+		var f = new File(morceaux, m.name);
+		await PSX_garderDisque(jeu.id, f);
+		return f;
 	}
 
 	async function lancer() {
@@ -146,16 +177,13 @@
 		$("overlay").classList.add("parti");
 		$("boot").hidden = false;
 		etape(1, "encours", bios ? PT.t("boot1d", { bios: biosNom }) : PT.t("boot1dHle"));
-		etape(2, "", distant ? "" : PT.t("boot2d", { size: tailleMo() }));
+		etape(2, "", disque ? PT.t("boot2d", { size: tailleMo() }) : "");
 		etape(3, "", "");
-		var source = disque;
-		if (distant) {
-			try {
-				var d = await preparerDisqueDistant();
-				source = d.url;
-				window.EJS_externalFiles = d.externes;
-			} catch (e) { return arret("disc: " + e); }
+		if (!disque) {
+			etape(2, "encours");
+			try { disque = await telechargerDisque(); } catch (e) { return arret("disc: " + e.message); }
 		}
+		var source = disque;
 
 		window.EJS_player = "#game";
 		window.EJS_core = "pcsx_rearmed";
@@ -368,7 +396,7 @@
 
 		liste.appendChild(titre("game"));
 		liste.appendChild(PT.ligne("catalog", function () { quitter("./"); }));
-		if (!distant) liste.appendChild(PT.ligne("forgetDisc", function () { PSX_oublierDisque(jeu.id).then(function () { quitter(location.href); }); }));
+		liste.appendChild(PT.ligne("forgetDisc", function () { PSX_oublierDisque(jeu.id).then(function () { quitter(location.href); }); }));
 
 		$("menu-info").textContent = [PT.t("boot2d", { size: tailleMo() }), "BIOS " + (biosNom || "HLE"), jeu.serial, "PCSX-ReARMed"].join(" · ");
 	}
