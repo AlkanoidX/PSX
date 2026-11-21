@@ -80,6 +80,7 @@
     }
     const config = {};
     config.gameUrl = window.EJS_gameUrl;
+    config.gameStream = window.EJS_gameStream; // PlayTab: disc streamed by the page (see emulator.js downloadRom)
     config.dataPath = scriptPath;
     config.system = window.EJS_core;
     config.biosUrl = window.EJS_biosUrl;

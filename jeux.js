@@ -15,7 +15,7 @@ window.PSX_JEUX = [
 ];
 
 // Bump with the ?v= stamps in index.html and jeu.html whenever a site or patched EmulatorJS file changes.
-window.PSX_VERSION = "20261121c";
+window.PSX_VERSION = "20261121d";
 
 // PS1 disc repo: one folder per game (its initials), read straight from GitHub (CORS allowed).
 window.PSX_DEPOT = "https://raw.githubusercontent.com/AlkanoidX/ps1/main/";

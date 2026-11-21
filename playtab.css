@@ -100,3 +100,10 @@ html[data-input="mouse"] #help, html[data-input="touch"] #help { display: none; 
 	:root { --t: 0s; }
 	*, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
 }
+
+/* PlayTab Premium: gold + breathing gold halo (same as the site's Premium badge) */
+h3.premium { color: #ffd36b; }
+.row.premium .side, .pill.premium { color: #ffd36b; text-shadow: 0 0 .6rem rgba(255, 211, 107, .55); animation: pt-or 2.6s ease-in-out infinite; }
+.pill.premium { background: rgba(255, 211, 107, .14); }
+@keyframes pt-or { 50% { text-shadow: 0 0 1.2rem rgba(255, 211, 107, .9); } }
+@media (prefers-reduced-motion: reduce) { .row.premium .side, .pill.premium { animation: none; } }

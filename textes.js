@@ -1,6 +1,7 @@
 // Textes de l'interface (8 langues). Une clé absente reprend l'anglais. Variables : {nom}.
 window.PSX_TEXTES = {
 en: {
+	boot2s: "{size} MB disc, read by chunks while you play", filter: "Screen filter", fNone: "None", fSmooth2: "Smoothing 2×", fSmooth4: "Smoothing 4×", fCrt: "CRT TV", fCrtSharp: "Sharp CRT", fCrtCurved: "Curved CRT", premiumTitle: "Premium", premiumPitch: "Fast forward and rewind", ffSpeed: "Fast forward speed", speedKeys: "Fast forward · rewind keys", fastForward: "Fast forward (hold)", rewind: "Rewind (hold)", disc: "Disc", discN: "Disc {n}", freeThis: "Free this game from the browser", storage: "Storage", storageTitle: "Games in this browser", storageUsed: "Games: {size} MB · free in the browser: {free} GB", storageEmpty: "No game kept in this browser yet.", freeGame: "Free", freeAll: "Free all games", freed: "{game} freed: it downloads again while you play.", inBrowser: "{size} MB kept in this browser", streamed: "Downloads while you play, by chunks", keepGames: "Keep games in this browser", keepRefused: "The browser refused.",
 	select: "Select", back: "Back", change: "Change", yes: "Yes", no: "No", platform: "PlayStation",
 	library: "Library", gamesCount: "{n} games", gameCount: "1 game", noGames: "No games yet.",
 	discSaved: "Disc remembered: starts right away", discNeeded: "Insert the disc on first launch",
@@ -30,6 +31,7 @@ en: {
 	halted: "The game stopped", haltHelp: "Reload the page to start again. Your memory card is kept.", reload: "Reload"
 },
 fr: {
+	boot2s: "Disque de {size} Mo, lu par morceaux pendant la partie", filter: "Filtre d’écran", fNone: "Aucun", fSmooth2: "Lissage 2×", fSmooth4: "Lissage 4×", fCrt: "Télé cathodique", fCrtSharp: "Cathodique net", fCrtCurved: "Cathodique bombé", premiumTitle: "Premium", premiumPitch: "Avance rapide et retour en arrière", ffSpeed: "Vitesse de l’avance rapide", speedKeys: "Touches avance rapide · retour", fastForward: "Avance rapide (maintenir)", rewind: "Retour en arrière (maintenir)", disc: "Disque", discN: "Disque {n}", freeThis: "Libérer ce jeu du navigateur", storage: "Stockage", storageTitle: "Jeux dans ce navigateur", storageUsed: "Jeux : {size} Mo · libre dans le navigateur : {free} Go", storageEmpty: "Aucun jeu gardé dans ce navigateur pour l’instant.", freeGame: "Libérer", freeAll: "Libérer tous les jeux", freed: "{game} libéré : il se retélécharge pendant la partie.", inBrowser: "{size} Mo gardés dans ce navigateur", streamed: "Se télécharge pendant la partie, par morceaux", keepGames: "Garder les jeux dans ce navigateur", keepRefused: "Le navigateur a refusé.",
 	select: "Sélectionner", back: "Retour", change: "Changer", yes: "Oui", no: "Non", platform: "PlayStation",
 	library: "Bibliothèque", gamesCount: "{n} jeux", gameCount: "1 jeu", noGames: "Aucun jeu pour l’instant.",
 	discSaved: "Disque mémorisé : lancement direct", discNeeded: "Disque à insérer au premier lancement",
@@ -59,6 +61,7 @@ fr: {
 	halted: "Le jeu s’est arrêté", haltHelp: "Recharge la page pour recommencer. Ta carte mémoire est conservée.", reload: "Recharger"
 },
 es: {
+	boot2s: "Disco de {size} MB, leído por partes mientras juegas", filter: "Filtro de pantalla", fNone: "Ninguno", fSmooth2: "Suavizado 2×", fSmooth4: "Suavizado 4×", fCrt: "Tele CRT", fCrtSharp: "CRT nítido", fCrtCurved: "CRT curvo", premiumTitle: "Premium", premiumPitch: "Avance rápido y rebobinado", ffSpeed: "Velocidad del avance rápido", speedKeys: "Teclas de avance · rebobinado", fastForward: "Avance rápido (mantener)", rewind: "Rebobinar (mantener)", disc: "Disco", discN: "Disco {n}", freeThis: "Liberar este juego del navegador", storage: "Almacenamiento", storageTitle: "Juegos en este navegador", storageUsed: "Juegos: {size} MB · libre en el navegador: {free} GB", storageEmpty: "Todavía no hay juegos guardados en este navegador.", freeGame: "Liberar", freeAll: "Liberar todos los juegos", freed: "{game} liberado: se vuelve a descargar mientras juegas.", inBrowser: "{size} MB guardados en este navegador", streamed: "Se descarga mientras juegas, por partes", keepGames: "Conservar los juegos en este navegador", keepRefused: "El navegador lo rechazó.",
 	select: "Seleccionar", back: "Volver", change: "Cambiar", yes: "Sí", no: "No",
 	library: "Biblioteca", gamesCount: "{n} juegos", gameCount: "1 juego", noGames: "Aún no hay juegos.",
 	discSaved: "Disco recordado: arranca directamente", discNeeded: "Inserta el disco en el primer arranque",
@@ -88,6 +91,7 @@ es: {
 	halted: "El juego se ha detenido", haltHelp: "Recarga la página para empezar de nuevo. Tu tarjeta de memoria se conserva.", reload: "Recargar"
 },
 de: {
+	boot2s: "{size}-MB-Disc, wird beim Spielen stückweise gelesen", filter: "Bildschirmfilter", fNone: "Keiner", fSmooth2: "Glättung 2×", fSmooth4: "Glättung 4×", fCrt: "Röhrenfernseher", fCrtSharp: "Scharfe Röhre", fCrtCurved: "Gewölbte Röhre", premiumTitle: "Premium", premiumPitch: "Vorspulen und Zurückspulen", ffSpeed: "Vorspul-Tempo", speedKeys: "Tasten Vorspulen · Zurückspulen", fastForward: "Vorspulen (halten)", rewind: "Zurückspulen (halten)", disc: "Disc", discN: "Disc {n}", freeThis: "Dieses Spiel aus dem Browser entfernen", storage: "Speicher", storageTitle: "Spiele in diesem Browser", storageUsed: "Spiele: {size} MB · frei im Browser: {free} GB", storageEmpty: "Noch kein Spiel in diesem Browser gespeichert.", freeGame: "Entfernen", freeAll: "Alle Spiele entfernen", freed: "{game} entfernt: wird beim Spielen neu geladen.", inBrowser: "{size} MB in diesem Browser gespeichert", streamed: "Wird beim Spielen stückweise geladen", keepGames: "Spiele in diesem Browser behalten", keepRefused: "Der Browser hat abgelehnt.",
 	select: "Auswählen", back: "Zurück", change: "Ändern", yes: "Ja", no: "Nein",
 	library: "Bibliothek", gamesCount: "{n} Spiele", gameCount: "1 Spiel", noGames: "Noch keine Spiele.",
 	discSaved: "Disc gespeichert: startet sofort", discNeeded: "Disc beim ersten Start einlegen",
@@ -117,6 +121,7 @@ de: {
 	halted: "Das Spiel wurde beendet", haltHelp: "Lade die Seite neu, um von vorn zu beginnen. Deine Memory Card bleibt erhalten.", reload: "Neu laden"
 },
 it: {
+	boot2s: "Disco da {size} MB, letto a pezzi mentre giochi", filter: "Filtro schermo", fNone: "Nessuno", fSmooth2: "Smussatura 2×", fSmooth4: "Smussatura 4×", fCrt: "TV a tubo", fCrtSharp: "Tubo nitido", fCrtCurved: "Tubo curvo", premiumTitle: "Premium", premiumPitch: "Avanti veloce e riavvolgimento", ffSpeed: "Velocità avanti veloce", speedKeys: "Tasti avanti · riavvolgi", fastForward: "Avanti veloce (tieni premuto)", rewind: "Riavvolgi (tieni premuto)", disc: "Disco", discN: "Disco {n}", freeThis: "Libera questo gioco dal browser", storage: "Archiviazione", storageTitle: "Giochi in questo browser", storageUsed: "Giochi: {size} MB · libero nel browser: {free} GB", storageEmpty: "Nessun gioco salvato in questo browser per ora.", freeGame: "Libera", freeAll: "Libera tutti i giochi", freed: "{game} liberato: si riscarica mentre giochi.", inBrowser: "{size} MB salvati in questo browser", streamed: "Si scarica mentre giochi, a pezzi", keepGames: "Tieni i giochi in questo browser", keepRefused: "Il browser ha rifiutato.",
 	select: "Seleziona", back: "Indietro", change: "Cambia", yes: "Sì", no: "No",
 	library: "Libreria", gamesCount: "{n} giochi", gameCount: "1 gioco", noGames: "Ancora nessun gioco.",
 	discSaved: "Disco memorizzato: parte subito", discNeeded: "Inserisci il disco al primo avvio",
@@ -146,6 +151,7 @@ it: {
 	halted: "Il gioco si è fermato", haltHelp: "Ricarica la pagina per ricominciare. La memory card è conservata.", reload: "Ricarica"
 },
 pt: {
+	boot2s: "Disco de {size} MB, lido em partes enquanto você joga", filter: "Filtro de tela", fNone: "Nenhum", fSmooth2: "Suavização 2×", fSmooth4: "Suavização 4×", fCrt: "TV de tubo", fCrtSharp: "Tubo nítido", fCrtCurved: "Tubo curvo", premiumTitle: "Premium", premiumPitch: "Avanço rápido e retrocesso", ffSpeed: "Velocidade do avanço rápido", speedKeys: "Teclas de avanço · retrocesso", fastForward: "Avanço rápido (segurar)", rewind: "Voltar (segurar)", disc: "Disco", discN: "Disco {n}", freeThis: "Liberar este jogo do navegador", storage: "Armazenamento", storageTitle: "Jogos neste navegador", storageUsed: "Jogos: {size} MB · livre no navegador: {free} GB", storageEmpty: "Nenhum jogo guardado neste navegador ainda.", freeGame: "Liberar", freeAll: "Liberar todos os jogos", freed: "{game} liberado: baixa de novo enquanto você joga.", inBrowser: "{size} MB guardados neste navegador", streamed: "Baixa enquanto você joga, em partes", keepGames: "Manter os jogos neste navegador", keepRefused: "O navegador recusou.",
 	select: "Selecionar", back: "Voltar", change: "Mudar", yes: "Sim", no: "Não",
 	library: "Biblioteca", gamesCount: "{n} jogos", gameCount: "1 jogo", noGames: "Ainda não há jogos.",
 	discSaved: "Disco memorizado: inicia direto", discNeeded: "Insira o disco na primeira vez",
@@ -175,6 +181,7 @@ pt: {
 	halted: "O jogo parou", haltHelp: "Recarregue a página para recomeçar. Seu memory card é mantido.", reload: "Recarregar"
 },
 pl: {
+	boot2s: "Płyta {size} MB, czytana w częściach podczas gry", filter: "Filtr ekranu", fNone: "Brak", fSmooth2: "Wygładzanie 2×", fSmooth4: "Wygładzanie 4×", fCrt: "Telewizor kineskopowy", fCrtSharp: "Ostry kineskop", fCrtCurved: "Wypukły kineskop", premiumTitle: "Premium", premiumPitch: "Przewijanie do przodu i do tyłu", ffSpeed: "Szybkość przewijania", speedKeys: "Klawisze przewijania", fastForward: "Do przodu (przytrzymaj)", rewind: "Do tyłu (przytrzymaj)", disc: "Płyta", discN: "Płyta {n}", freeThis: "Usuń tę grę z przeglądarki", storage: "Pamięć", storageTitle: "Gry w tej przeglądarce", storageUsed: "Gry: {size} MB · wolne w przeglądarce: {free} GB", storageEmpty: "Brak gier zapisanych w tej przeglądarce.", freeGame: "Usuń", freeAll: "Usuń wszystkie gry", freed: "Usunięto {game}: pobierze się znowu podczas gry.", inBrowser: "{size} MB zapisane w tej przeglądarce", streamed: "Pobiera się podczas gry, w częściach", keepGames: "Zachowaj gry w tej przeglądarce", keepRefused: "Przeglądarka odmówiła.",
 	select: "Wybierz", back: "Wstecz", change: "Zmień", yes: "Tak", no: "Nie",
 	library: "Biblioteka", gamesCount: "Gry: {n}", gameCount: "1 gra", noGames: "Na razie brak gier.",
 	discSaved: "Płyta zapamiętana: start od razu", discNeeded: "Włóż płytę przy pierwszym uruchomieniu",
@@ -204,6 +211,7 @@ pl: {
 	halted: "Gra się zatrzymała", haltHelp: "Odśwież stronę, aby zacząć od nowa. Karta pamięci zostaje.", reload: "Odśwież"
 },
 tr: {
+	boot2s: "{size} MB disk, oynarken parça parça okunur", filter: "Ekran filtresi", fNone: "Yok", fSmooth2: "Yumuşatma 2×", fSmooth4: "Yumuşatma 4×", fCrt: "Tüplü TV", fCrtSharp: "Net tüp", fCrtCurved: "Kavisli tüp", premiumTitle: "Premium", premiumPitch: "İleri ve geri sarma", ffSpeed: "İleri sarma hızı", speedKeys: "İleri · geri sarma tuşları", fastForward: "İleri sar (basılı tut)", rewind: "Geri sar (basılı tut)", disc: "Disk", discN: "Disk {n}", freeThis: "Bu oyunu tarayıcıdan kaldır", storage: "Depolama", storageTitle: "Bu tarayıcıdaki oyunlar", storageUsed: "Oyunlar: {size} MB · tarayıcıda boş: {free} GB", storageEmpty: "Bu tarayıcıda henüz saklanan oyun yok.", freeGame: "Kaldır", freeAll: "Tüm oyunları kaldır", freed: "{game} kaldırıldı: oynarken yeniden iner.", inBrowser: "Bu tarayıcıda {size} MB saklanıyor", streamed: "Oynarken parça parça iner", keepGames: "Oyunları bu tarayıcıda tut", keepRefused: "Tarayıcı reddetti.",
 	select: "Seç", back: "Geri", change: "Değiştir", yes: "Evet", no: "Hayır",
 	library: "Kütüphane", gamesCount: "{n} oyun", gameCount: "1 oyun", noGames: "Henüz oyun yok.",
 	discSaved: "Disk hatırlandı: hemen başlar", discNeeded: "İlk açılışta diski tak",

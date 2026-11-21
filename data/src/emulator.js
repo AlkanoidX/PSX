@@ -782,6 +782,13 @@ class EmulatorJS {
         };
 
         return new Promise(resolve => {
+            // PlayTab: the page streams the disc itself. gameStream(FS) creates the disc file(s), read on demand by
+            // chunks, and returns the file to start (a .bin, or an .m3u for a multi-disc game); nothing is downloaded here.
+            if (typeof this.config.gameStream === "function") {
+                Promise.resolve(this.config.gameStream(this.gameManager.FS)).then((name) => { this.fileName = name; resolve(); },
+                    (e) => this.startGameError(String(e && e.message || e)));
+                return;
+            }
             this.textElem.innerText = this.localization("Download Game Data");
 
             const gotGameData = (data) => {
@@ -3326,13 +3333,16 @@ class EmulatorJS {
     keyChange(e) {
         if (e.repeat) return;
         if (!this.started) return;
+        // PlayTab: keys sent by pt-input.js (player's own keys from Big Picture) carry only KeyboardEvent.code
+        const keyCode = e.keyCode || (/^Key[A-Z]$/.test(e.code) ? e.code.charCodeAt(3) : /^Digit[0-9]$/.test(e.code) ? 48 + Number(e.code[5])
+            : { Enter: 13, Backspace: 8, Space: 32, ArrowLeft: 37, ArrowUp: 38, ArrowRight: 39, ArrowDown: 40 }[e.code] || 0);
         if (this.controlPopup.parentElement.parentElement.getAttribute("hidden") === null) {
             const num = this.controlPopup.getAttribute("button-num");
             const player = this.controlPopup.getAttribute("player-num");
             if (!this.controls[player][num]) {
                 this.controls[player][num] = {};
             }
-            this.controls[player][num].value = e.keyCode;
+            this.controls[player][num].value = keyCode;
             this.controlPopup.parentElement.parentElement.setAttribute("hidden", "");
             this.checkGamepadInputs();
             this.saveSettings();
@@ -3343,7 +3353,7 @@ class EmulatorJS {
         const special = [16, 17, 18, 19, 20, 21, 22, 23];
         for (let i = 0; i < 4; i++) {
             for (let j = 0; j < 30; j++) {
-                if (this.controls[i][j] && this.controls[i][j].value === e.keyCode) {
+                if (this.controls[i][j] && this.controls[i][j].value === keyCode) {
                     this.gameManager.simulateInput(i, j, (e.type === "keyup" ? 0 : (special.includes(j) ? 0x7fff : 1)));
                 }
             }
@@ -4342,6 +4352,7 @@ class EmulatorJS {
     }
     menuOptionChanged(option, value) {
         this.saveSettings();
+        if (!this.allSettings) this.allSettings = {};   // PlayTab fix: the disc menu (multi-disc) is built before the settings menu
         this.allSettings[option] = value;
         if (this.debug) console.log(option, value);
         if (!this.gameManager) return;

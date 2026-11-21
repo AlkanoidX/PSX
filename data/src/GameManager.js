@@ -145,6 +145,7 @@ class EJS_GameManager {
             "video_top_portrait_viewport = true\n" +
             "video_vsync = true\n" +
             "video_smooth = false\n" +
+            "video_font_enable = false\n" + // PlayTab: no RetroArch text drawn over the game ("Rewinding."...)
             "fastforward_ratio = 3.0\n" +
             "slowmotion_ratio = 3.0\n" +
             (this.EJS.rewindEnabled ? "rewind_enable = true\n" : "") +

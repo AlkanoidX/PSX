@@ -7,12 +7,12 @@
 <meta name="robots" content="noindex">
 <link rel="icon" href="data:,">
 <title>PlayStation</title>
-<script src="jeux.js?v=20261121c"></script>
+<script src="jeux.js?v=20261121d"></script>
 <script>
 	// "…/PSX/?DRV" lance directement le jeu.
 	if (PSX_idDansUrl()) location.replace("jeu.html?" + encodeURIComponent(PSX_idDansUrl()) + location.hash);
 </script>
-<link rel="stylesheet" href="playtab.css?v=20261121c">
+<link rel="stylesheet" href="playtab.css?v=20261121d">
 <style>
 	body { display: flex; flex-direction: column; position: relative;
 		background: radial-gradient(60% 60% at 50% 45%, #10241a 0%, var(--bg) 70%); }
@@ -45,6 +45,8 @@
 	.boitier-titre { position: absolute; left: 13%; right: 0; bottom: 0; padding: 0 9% 11%; font: 850 1.9rem/1.05 var(--display); font-stretch: 110%; text-shadow: 0 .2rem 1rem rgba(0,0,0,.35); text-wrap: balance; }
 	.boitier-serial { position: absolute; top: 8%; right: 8%; font: 600 .8rem var(--mono); letter-spacing: .08em; color: rgba(255,255,255,.75); }
 
+	.fiche .actions { display: flex; flex-wrap: wrap; gap: 1.2rem; align-items: center; }
+	#st-liste .vide { color: var(--muted); padding: .5rem 1.2rem; }
 	@media (max-height: 560px) { header { padding-top: calc(2rem + env(safe-area-inset-top)); } .fiche { padding-bottom: calc(2rem + env(safe-area-inset-bottom)); min-height: 0; } }
 </style>
 </head>
@@ -61,12 +63,25 @@
 		<h2 id="titre"></h2>
 		<div class="meta" id="meta"></div>
 		<div class="etat" id="etat"></div>
-		<a class="btn is-primary is-xl f" id="jouer" href="#" tabindex="-1" data-t="play">Play</a>
+		<div class="actions">
+			<a class="btn is-primary is-xl f" id="jouer" href="#" tabindex="-1" data-t="play">Play</a>
+			<button class="btn f" id="stockage" type="button" tabindex="-1" data-t="storage">Storage</button>
+		</div>
 	</section>
 
-	<script src="textes.js?v=20261121c"></script>
-	<script src="playtab.js?v=20261121c"></script>
-	<script src="disques.js?v=20261121c"></script>
+	<!-- Games kept in this browser (streamed disc chunks, flux.js); saves are never touched -->
+	<div class="modal-wrap" id="st" hidden>
+		<div class="modal" role="dialog" aria-labelledby="st-titre">
+			<div><div class="eyebrow" data-t="platform"></div><h2 id="st-titre" data-t="storageTitle"></h2></div>
+			<div class="scroll" id="st-liste"></div>
+			<div class="info" id="st-info"></div>
+		</div>
+	</div>
+
+	<script src="textes.js?v=20261121d"></script>
+	<script src="playtab.js?v=20261121d"></script>
+	<script src="disques.js?v=20261121d"></script>
+	<script src="flux.js?v=20261121d"></script>
 	<script>
 	(function () {
 		var jeux = PSX_JEUX.slice(), $ = function (i) { return document.getElementById(i); };
@@ -89,8 +104,37 @@
 
 		try { var d = sessionStorage.getItem("psx-dernier"); if (d) index = Math.max(0, jeux.findIndex(function (j) { return j.id === d; })); } catch (e) {}
 
+		// ---- Discs streamed from the repo: what each game keeps in this browser (Cache Storage, flux.js) ----
+		function dossiersDe(j) { return j.disques || (j.disque ? [j.disque] : []); }
+		var reservesJeu = {};
+		function reserves(j) {
+			return reservesJeu[j.id] || (reservesJeu[j.id] = Promise.all(dossiersDe(j).map(function (d) {
+				var a = new URL(d, PSX_DEPOT).href;
+				return fetch(a + "disc.json", { cache: "no-cache" }).then(function (r) { return r.json(); }).then(function (m) { return { nom: PSX_nomReserve(a, m.size), size: m.size }; });
+			})).catch(function () { delete reservesJeu[j.id]; return []; }));
+		}
+		async function place(j) {
+			if (!self.caches) return 0;
+			var o = 0, l = await reserves(j);
+			for (var i = 0; i < l.length; i++) {
+				if (!(await caches.has(l[i].nom))) continue;
+				o += Math.min((await (await caches.open(l[i].nom)).keys()).length * PSX_FLUX_CHUNK, l[i].size);
+			}
+			return o;
+		}
+		function mo(o) { return PT.nombre(o / 1048576, 0); }
+		function liberer(j) { return reserves(j).then(function (l) { return Promise.all(l.map(function (r) { return caches.delete(r.nom); })); }); }
+
 		function etat() {
 			var j = jeux[index];
+			if (dossiersDe(j).length) {
+				place(j).then(function (o) {
+					if (jeux[index] !== j) return;
+					$("etat").innerHTML = o ? '<span class="pill"></span>' : '<span></span>';
+					$("etat").firstChild.textContent = o ? PT.t("inBrowser", { size: mo(o) }) : PT.t("streamed");
+				}, function () {});
+				return;
+			}
 			PSX_lireDisque(j.id).then(function (f) {
 				if (jeux[index] !== j) return;
 				$("etat").innerHTML = f ? '<span class="pill" data-t="discSaved"></span>' : '<span data-t="discNeeded"></span>';
@@ -114,7 +158,7 @@
 
 		$("jouer").addEventListener("click", function (e) { e.preventDefault(); jouer(); });
 
-		PT.ecran({
+		var principal = {
 			racine: document.body,
 			depart: $("rail"),
 			aide: ["change", "select"],
@@ -125,7 +169,41 @@
 				return true;
 			},
 			start: jouer
-		});
+		};
+		PT.ecran(principal);
+
+		// ---- Storage screen ----
+		var garde = false;
+		async function ouvrirStockage(depart) {
+			var l = $("st-liste"), total = 0, lignes = [];
+			for (var i = 0; i < jeux.length; i++) {
+				var j = jeux[i];
+				if (!dossiersDe(j).length) continue;
+				var o = await place(j);
+				if (o) { total += o; lignes.push([j, o]); }
+			}
+			try { garde = await navigator.storage.persisted(); } catch (e) {}
+			l.innerHTML = "";
+			if (!lignes.length) { var p = document.createElement("p"); p.className = "vide"; p.textContent = PT.t("storageEmpty"); l.appendChild(p); }
+			lignes.forEach(function (x) {
+				l.appendChild(PT.ligne(function () { return x[0].titre + " · " + PT.t("freeGame"); }, function () {
+					liberer(x[0]).then(function () { PT.toast(PT.t("freed", { game: x[0].titre })); etat(); ouvrirStockage(); });
+				}, function () { return mo(x[1]) + (PT.lang === "fr" ? " Mo" : " MB"); }));
+			});
+			if (lignes.length > 1) l.appendChild(PT.ligne("freeAll", function () {
+				Promise.all(lignes.map(function (x) { return liberer(x[0]); })).then(function () { etat(); ouvrirStockage(); });
+			}));
+			if (navigator.storage && navigator.storage.persist) l.appendChild(PT.interrupteur({ t: "keepGames", get: function () { return garde; },
+				set: function (v) { if (!v || garde) return; navigator.storage.persist().then(function (ok) { garde = ok; if (!ok) PT.toast(PT.t("keepRefused")); ouvrirStockage(); }); } }));
+			var b = document.createElement("button"); b.className = "btn is-wide f"; b.tabIndex = -1; b.textContent = PT.t("back"); b.addEventListener("click", fermerStockage);
+			l.appendChild(b);
+			var est = {}; try { est = await navigator.storage.estimate(); } catch (e) {}
+			$("st-info").textContent = PT.t("storageUsed", { size: mo(total), free: PT.nombre(Math.max(0, (est.quota || 0) - (est.usage || 0)) / 1073741824, 1) });
+			$("st").hidden = false;
+			PT.ecran({ racine: $("st"), aide: ["back", "select"], retour: fermerStockage, depart: depart || l.querySelector(".f") });
+		}
+		function fermerStockage() { $("st").hidden = true; principal.depart = $("stockage"); PT.ecran(principal); principal.depart = $("rail"); }
+		$("stockage").addEventListener("click", function () { ouvrirStockage(); });
 		// A sur le rail = jouer
 		$("rail").addEventListener("click", function (e) { if (e.target === $("rail") || e.target === piste) jouer(); });
 

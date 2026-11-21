@@ -10,9 +10,17 @@
 	var TACTILE = matchMedia("(pointer: coarse)").matches;
 	var TAILLE_BIOS = 512 * 1024, TAILLE_CARTE = 128 * 1024;
 	var disque = null, bios = null, biosNom = "", emu = null, enJeu = false, menuOuvert = false;
-	var distant = !!jeu.disque;   // disc folder in the GitHub repo (jeux.js): the player has nothing to provide
-	var manifeste = null;         // its disc.json: { name, size, piece, pieces }
-	function tailleMo() { return disque ? PT.nombre(disque.size / 1048576, 0) : "…"; }
+	// Disc folders in the GitHub repo (jeux.js "disque", or "disques" for a multi-disc game): streamed by chunks (flux.js),
+	// the player has nothing to provide. Without them, the player's own .bin (kept in IndexedDB, disques.js).
+	var dossiers = jeu.disques || (jeu.disque ? [jeu.disque] : []);
+	var distant = dossiers.length > 0;
+	var manifestes = [];          // disc.json of each disc: { name, size, piece, pieces }
+	var flux = [];                // their streams, made at launch
+	var premium = false;          // PlayTab Premium (asked to PlayTab's player frame): fast forward and rewind
+	function tailleMo() {
+		var o = distant ? manifestes.reduce(function (t, m) { return t + m.size; }, 0) : disque ? disque.size : 0;
+		return o ? PT.nombre(o / 1048576, 0) : "…";
+	}
 
 	document.title = jeu.titre;
 	$("titre").textContent = jeu.titre;
@@ -25,35 +33,82 @@
 	var stats = reglage("stats", TACTILE ? "0" : "1") === "1";
 	var typePad = reglage("padtype", "517");          // 517 = DualShock, 1 = manette standard
 	var typePadLance = typePad;
+	var filtre = reglage("filtre", "disabled");       // EmulatorJS shader (data/src/shaders.js) or "disabled"
+	var vitesse = reglage("vitesse", "3.0");          // fast forward ratio (Premium)
 
 	// ---------- Commandes (index RetroPad d'EmulatorJS) ----------
 	var BOUTONS = [
 		[0, "cross"], [8, "circle"], [1, "square"], [9, "triangle"], [10, "L1"], [11, "R1"], [12, "L2"], [13, "R2"], [14, "L3"], [15, "R3"],
 		[2, "Select"], [3, "Start"], [4, "up"], [5, "down"], [6, "left"], [7, "right"],
-		[19, "lsUp"], [18, "lsDown"], [17, "lsLeft"], [16, "lsRight"], [23, "rsUp"], [22, "rsDown"], [21, "rsLeft"], [20, "rsRight"]
+		[19, "lsUp"], [18, "lsDown"], [17, "lsLeft"], [16, "lsRight"], [23, "rsUp"], [22, "rsDown"], [21, "rsLeft"], [20, "rsRight"],
+		[27, "fastForward"], [28, "rewind"]   // held down; PlayTab Premium only
 	];
+	var PREMIUM_BOUTONS = [27, 28];
 	var PAD = { 0: "BUTTON_1", 8: "BUTTON_2", 1: "BUTTON_3", 9: "BUTTON_4", 10: "LEFT_TOP_SHOULDER", 11: "RIGHT_TOP_SHOULDER",
 		12: "LEFT_BOTTOM_SHOULDER", 13: "RIGHT_BOTTOM_SHOULDER", 14: "LEFT_STICK", 15: "RIGHT_STICK", 2: "SELECT", 3: "START",
 		4: "DPAD_UP", 5: "DPAD_DOWN", 6: "DPAD_LEFT", 7: "DPAD_RIGHT",
 		16: "LEFT_STICK_X:+1", 17: "LEFT_STICK_X:-1", 18: "LEFT_STICK_Y:+1", 19: "LEFT_STICK_Y:-1",
 		20: "RIGHT_STICK_X:+1", 21: "RIGHT_STICK_X:-1", 22: "RIGHT_STICK_Y:+1", 23: "RIGHT_STICK_Y:-1" };
 	// Clavier joueur 1 (PAGE_DESIGN 7.2) : codes de touches
-	var CLAVIER = { 0: 90, 8: 88, 1: 65, 9: 83, 10: 81, 11: 87, 12: 49, 13: 50, 2: 8, 3: 13, 4: 38, 5: 40, 6: 37, 7: 39, 16: 76, 17: 74, 18: 75, 19: 73 };
+	var CLAVIER = { 0: 90, 8: 88, 1: 65, 9: 83, 10: 81, 11: 87, 12: 49, 13: 50, 2: 8, 3: 13, 4: 38, 5: 40, 6: 37, 7: 39, 16: 76, 17: 74, 18: 75, 19: 73, 27: 69, 28: 82 };
 	function commandesParDefaut() {
 		var c = {};
 		for (var p = 0; p < 4; p++) {
 			c[p] = {};
 			for (var i = 0; i < 30; i++) {
-				if (PAD[i] === undefined) { c[p][i] = {}; continue; }
+				if (PAD[i] === undefined) { c[p][i] = p === 0 && CLAVIER[i] !== undefined ? { value: CLAVIER[i] } : {}; continue; }
 				c[p][i] = { value2: PAD[i] };
 				if (p === 0 && CLAVIER[i] !== undefined) c[p][i].value = CLAVIER[i];
 			}
 		}
 		return c;
 	}
-	function commandesMemorisees() { try { var c = JSON.parse(PT.lire("psx-controles")); if (c && c[0]) return c; } catch (e) {} return commandesParDefaut(); }
+	function commandesMemorisees() {
+		try {
+			var c = JSON.parse(PT.lire("psx-controles"));
+			if (c && c[0]) {
+				// Controls saved before fast forward / rewind existed get their default keys.
+				var d = commandesParDefaut();
+				PREMIUM_BOUTONS.forEach(function (i) { var k = c[0][i]; if (!k || (k.value === undefined && k.value2 === undefined)) c[0][i] = d[0][i]; });
+				return c;
+			}
+		} catch (e) {}
+		return commandesParDefaut();
+	}
 	var commandes = commandesMemorisees();
-	function garderCommandes() { PT.ecrire("psx-controles", JSON.stringify(commandes)); if (emu) emu.controls = JSON.parse(JSON.stringify(commandes)); }
+	// What EmulatorJS gets: without Premium, fast forward and rewind have no key.
+	function commandesJeu() {
+		var c = JSON.parse(JSON.stringify(commandes));
+		if (!premium) for (var p in c) PREMIUM_BOUTONS.forEach(function (i) { c[p][i] = {}; });
+		return c;
+	}
+	function garderCommandes() { PT.ecrire("psx-controles", JSON.stringify(commandes)); if (emu) emu.controls = commandesJeu(); }
+
+	// ---------- PlayTab Premium (same exchange as the PS2 / PSP pages' cloud save) ----------
+	// The page never sees the account: PlayTab's player frame answers { pt: "cloud-state", on, premium }. Outside PlayTab: no Premium.
+	var CADRE = window.parent !== window ? window.parent : null;
+	function cadreOk(o) { return o === "https://bigpicture.playtab.fun" || /^http:\/\/(127\.0\.0\.1|localhost)(:\d+)?$/.test(o); }
+	var premiumPret = new Promise(function (ok) {
+		if (/^(127\.0\.0\.1|localhost)$/.test(location.hostname) && params.get("premium") === "1") return ok(true);   // local tests only
+		if (!CADRE) return ok(false);
+		function reponse(e) {
+			var d = e.data;
+			if (e.source === CADRE && cadreOk(e.origin) && d && d.pt === "cloud-state") { removeEventListener("message", reponse); ok(!!(d.on && d.premium)); }
+		}
+		addEventListener("message", reponse);
+		try { CADRE.postMessage({ pt: "cloud-hello" }, "*"); } catch (e) { ok(false); }
+		setTimeout(function () { removeEventListener("message", reponse); ok(false); }, 5000);
+	});
+	function ouvrirPremium() {
+		if (CADRE) { try { CADRE.postMessage({ pt: "cloud-premium" }, "*"); return; } catch (e) {} }
+		var l = PT.lang, u = "https://bigpicture.playtab.fun" + (["fr", "es", "de", "it", "pt", "pl", "tr"].indexOf(l) >= 0 ? "/" + l : "") + "/settings?s=premium";
+		window.open(u, "_blank", "noopener");
+	}
+
+	// Keys chosen by the player in Big Picture (pt-input.js, shared with the PS2 / PSP / Xbox pages): it turns them into this
+	// page's keys (Z = cross, I J K L = stick…, same table). activeLayer tells it when a menu is open (keys left alone).
+	window.activeLayer = function () { return !enJeu || menuOuvert ? "menu" : ""; };
+	if (DANS_IFRAME) { var pti = document.createElement("script"); pti.src = "/pt-cloud/pt-input.js?v=20261120"; pti.async = true; document.head.appendChild(pti); }
 
 	// ---------- Écran titre ----------
 	var lignesTitre = $("rows-titre");
@@ -84,16 +139,22 @@
 		ecranTitre(lignesTitre.querySelector(".f"));
 		texteCharge("preparing");
 		// Le cœur et le BIOS se chargent pendant qu'on lit le disque mémorisé.
-		var coeur = fetch("data/cores/pcsx_rearmed-wasm.data").catch(function () {});
+		var pret = fetch("data/cores/pcsx_rearmed-wasm.data").catch(function () {});
 		var b = biosServeur();
 		if (distant) {
-			try { manifeste = await (await fetch(dossierDistant() + "disc.json", { cache: "no-cache" })).json(); }
-			catch (e) { bios = await b; $("charge").hidden = true; return erreur("disc.json: " + e); }
+			try {
+				manifestes = await Promise.all(dossiers.map(function (d) {
+					return fetch(dossierDistant(d) + "disc.json", { cache: "no-cache" }).then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); });
+				}));
+			} catch (e) { bios = await b; $("charge").hidden = true; return erreur("disc.json: " + e); }
+			// Whole discs kept by the older page (IndexedDB) and EmulatorJS's own copies: the disc is now streamed.
+			PSX_oublierDisque(jeu.id).catch(function () {});
+			try { indexedDB.deleteDatabase("EmulatorJS-roms"); } catch (e) {}
+		} else {
+			try { disque = await PSX_lireDisque(jeu.id); } catch (e) { disque = null; }
 		}
-		try { disque = await PSX_lireDisque(jeu.id); } catch (e) { disque = null; }
-		// A remembered copy of a remote disc counts only if it is that exact disc.
-		if (distant && disque && (disque.size !== manifeste.size || disque.name !== manifeste.name)) disque = null;
-		bios = await b; await coeur;
+		premium = await premiumPret;
+		bios = await b; await pret;
 		$("charge").hidden = true;
 		if (!distant && !disque) return demanderDisque();
 		boutonJouer("play", true);
@@ -137,58 +198,39 @@
 		if (detail !== undefined) $("e" + n + "d").textContent = detail;
 	}
 
-	// Remote disc: download its pieces (4 at a time), join them in order, remember the result.
-	function dossierDistant() { return new URL(jeu.disque, PSX_DEPOT).href; }
-
-	async function telechargerDisque() {
-		var m = manifeste, morceaux = new Array(m.pieces), recus = 0, suivant = 0;
-		var barre = $("e2b"), total = PT.nombre(m.size / 1048576, 0);
-		barre.classList.remove("busy"); barre.hidden = false;
-		function progres() {
-			barre.firstElementChild.style.width = (100 * recus / m.pieces) + "%";
-			$("e2d").textContent = PT.nombre(Math.min(recus * m.piece, m.size) / 1048576, 0) + " / " + PT.t("boot2d", { size: total });
-		}
-		async function morceau(i) {
-			var url = dossierDistant() + String(i).padStart(5, "0") + ".bin";
-			for (var essai = 0; ; essai++) {
-				try {
-					var r = await fetch(url);
-					if (!r.ok) throw new Error(r.status + " " + url);
-					var b = await r.blob();
-					var attendu = i < m.pieces - 1 ? m.piece : m.size - m.piece * (m.pieces - 1);
-					if (b.size !== attendu) throw new Error("size " + b.size + " " + url);
-					return b;
-				} catch (e) { if (essai >= 2) throw e; }
-			}
-		}
-		async function ouvrier() {
-			while (suivant < m.pieces) { var i = suivant++; morceaux[i] = await morceau(i); recus++; progres(); }
-		}
-		progres();
-		await Promise.all([ouvrier(), ouvrier(), ouvrier(), ouvrier()]);
-		barre.classList.add("busy");
-		var f = new File(morceaux, m.name);
-		await PSX_garderDisque(jeu.id, f);
-		return f;
-	}
+	// Disc folder in the repo (an absolute address, e.g. a second repo, is taken as is).
+	function dossierDistant(d) { return new URL(d, PSX_DEPOT).href; }
 
 	async function lancer() {
 		PT.ecran(null);
 		$("overlay").classList.add("parti");
 		$("boot").hidden = false;
 		etape(1, "encours", bios ? PT.t("boot1d", { bios: biosNom }) : PT.t("boot1dHle"));
-		etape(2, "", disque ? PT.t("boot2d", { size: tailleMo() }) : "");
+		etape(2, "", PT.t(distant ? "boot2s" : "boot2d", { size: tailleMo() }));
 		etape(3, "", "");
-		if (!disque) {
+		if (distant) {
+			// The disc is read by chunks while playing; only its first chunks are fetched before the start.
 			etape(2, "encours");
-			try { disque = await telechargerDisque(); } catch (e) { return arret("disc: " + e.message); }
-		}
-		var source = disque;
+			flux = manifestes.map(function (m, i) { return PSX_flux(dossierDistant(dossiers[i]), m); });
+			var barre = $("e2b"), premiers = 8;
+			barre.classList.remove("busy"); barre.hidden = false;
+			flux[0].surProgres = function (f) { barre.firstElementChild.style.width = Math.min(100, 100 * f.lus / premiers) + "%"; };
+			await flux[0].prechauffer(premiers);
+			flux[0].surProgres = null;
+			barre.classList.add("busy");
+			var noms = flux.map(function (f, i) { return jeu.id + (flux.length > 1 ? "-" + (i + 1) : "") + ".bin"; });
+			window.EJS_gameStream = function (FS) {
+				flux.forEach(function (f, i) { PSX_fichierFlux(FS, "/" + noms[i], f); });
+				if (flux.length === 1) return noms[0];
+				FS.writeFile("/" + jeu.id + ".m3u", noms.join("\n"));   // multi-disc: the core switches discs from this list
+				return jeu.id + ".m3u";
+			};
+			window.EJS_gameUrl = flux.length > 1 ? jeu.id + ".m3u" : noms[0];
+		} else window.EJS_gameUrl = disque;
 
 		window.EJS_player = "#game";
 		window.EJS_core = "pcsx_rearmed";
 		window.EJS_pathtodata = "data/";
-		window.EJS_gameUrl = source;
 		if (bios) window.EJS_biosUrl = new File([bios], "scph5501.bin"); // nom attendu par le cœur
 		window.EJS_gameName = jeu.id;                // clé de la carte mémoire dans le navigateur
 		window.EJS_startOnLoaded = true;
@@ -196,9 +238,11 @@
 		window.EJS_color = "#34e27f";
 		window.EJS_backgroundColor = "#000000";
 		window.EJS_volume = gain(volume);
-		window.EJS_defaultControls = JSON.parse(JSON.stringify(commandes));
+		window.EJS_defaultControls = commandesJeu();
 		window.EJS_disableLocalStorage = true;       // réglages et commandes gérés par cette page
-		window.EJS_defaultOptions = { "save-save-interval": "30" };
+		window.EJS_disableDatabases = true;          // no copy of the disc / BIOS / core in EmulatorJS's IndexedDB
+		window.EJS_defaultOptions = { "save-save-interval": "30", "shader": filtre, "ff-ratio": vitesse,
+			"rewindEnabled": premium ? "enabled" : "disabled", "rewind-granularity": "2" };
 		window.EJS_DEBUG_XX = true;                  // charge data/src/*.js (pas de build minifié)
 		window.EJS_ready = function () {
 			emu = window.EJS_emulator;
@@ -212,7 +256,7 @@
 		};
 		window.EJS_onGameStart = function () { etape(1, "fini"); etape(2, "fini"); etape(3, "encours"); };
 		// Version stamp on files we patch, so the Cloudflare cache in front of the FTP serves the new ones.
-		window.EJS_paths = { "emulator.js": "data/src/emulator.js?v=" + PSX_VERSION };
+		window.EJS_paths = { "emulator.js": "data/src/emulator.js?v=" + PSX_VERSION, "GameManager.js": "data/src/GameManager.js?v=" + PSX_VERSION };
 		var s = document.createElement("script"); s.src = "data/loader.js?v=" + PSX_VERSION; document.body.appendChild(s);
 
 		var debut = performance.now(), bon = 0, avant = 0, tAvant = debut;
@@ -274,7 +318,8 @@
 			var n = emu.gameManager.getFrameNum(), t = performance.now();
 			var fps = statsT ? (n - statsAvant) * 1000 / (t - statsT) : 0;
 			statsAvant = n; statsT = t;
-			$("stats").textContent = "frame " + n + "   " + fps.toFixed(1) + " fps   " + (biosNom || "HLE BIOS") + "   pcsx_rearmed";
+			var d = flux.reduce(function (t, f) { return t + f.lus; }, 0), w = flux.reduce(function (t, f) { return t + f.attentes; }, 0);
+			$("stats").textContent = "frame " + n + "   " + fps.toFixed(1) + " fps   " + (biosNom || "HLE BIOS") + "   pcsx_rearmed" + (flux.length ? "   disc " + d + " MB" + (w ? " (" + w + " waits)" : "") : "");
 		}, 1000);
 	}
 
@@ -371,6 +416,10 @@
 			set: function (v) { document.documentElement.classList.toggle("contrast", v); PT.ecrire("psx-contrast", v ? "1" : "0"); } }));
 		liste.appendChild(PT.reglage({ t: "language", valeurs: PT.LANGS.map(function (l) { return { v: l, l: PT.NOMS_LANGUES[l] }; }),
 			get: function () { return PT.lang; }, set: function (v) { PT.changerLangue(v); } }));
+		// Screen filters (EmulatorJS shaders): ScaleHQ smoothing 2x / 4x, CRT looks.
+		liste.appendChild(PT.reglage({ t: "filter", valeurs: [["disabled", "fNone"], ["2xScaleHQ.glslp", "fSmooth2"], ["4xScaleHQ.glslp", "fSmooth4"],
+			["crt-easymode.glslp", "fCrt"], ["crt-aperture.glslp", "fCrtSharp"], ["crt-geom.glslp", "fCrtCurved"]].map(function (f) { return { v: f[0], l: function () { return PT.t(f[1]); } }; }),
+			get: function () { return filtre; }, set: function (v) { filtre = v; PT.ecrire("psx-filtre", v); try { emu.changeSettingOption("shader", v); } catch (e) {} } }));
 
 		liste.appendChild(titre("sound"));
 		var vols = []; for (var v = 0; v <= 100; v += 10) vols.push({ v: v, l: v + " %" });
@@ -386,6 +435,17 @@
 		liste.appendChild(ligneRelancer);
 		liste.appendChild(PT.ligne("controls", ouvrirControles));
 
+		// PlayTab Premium: fast forward and rewind (keys in Customize controls, E / R by default, held down)
+		var tp = titre("premiumTitle"); tp.classList.add("premium"); liste.appendChild(tp);
+		if (premium) {
+			liste.appendChild(PT.reglage({ t: "ffSpeed", valeurs: ["2.0", "3.0", "4.0"].map(function (v) { return { v: v, l: "×" + parseInt(v, 10) }; }),
+				get: function () { return vitesse; }, set: function (v) { vitesse = v; PT.ecrire("psx-vitesse", v); try { emu.changeSettingOption("ff-ratio", v); } catch (e) {} } }));
+			liste.appendChild(PT.ligne("speedKeys", ouvrirControles, function () { return nomsTouches(27) + "  ·  " + nomsTouches(28); }));
+		} else {
+			var lp = PT.ligne("premiumPitch", ouvrirPremium, function () { return "Premium"; });
+			lp.classList.add("premium"); liste.appendChild(lp);
+		}
+
 		liste.appendChild(titre("saves"));
 		liste.appendChild(PT.ligne("quickSave", sauvegardeRapide));
 		liste.appendChild(PT.ligne("quickLoad", chargementRapide));
@@ -398,7 +458,14 @@
 
 		liste.appendChild(titre("game"));
 		liste.appendChild(PT.ligne("catalog", function () { quitter("./"); }));
-		liste.appendChild(PT.ligne("forgetDisc", function () { PSX_oublierDisque(jeu.id).then(function () { quitter(location.href); }); }));
+		if (flux.length > 1) liste.appendChild(PT.reglage({ t: "disc", valeurs: flux.map(function (f, i) { return { v: i, l: function () { return PT.t("discN", { n: i + 1 }); } }; }),
+			get: function () { try { return emu.gameManager.getCurrentDisk(); } catch (e) { return 0; } },
+			set: function (v) { try { emu.gameManager.setCurrentDisk(v); PT.toast(PT.t("discN", { n: v + 1 })); } catch (e) {} } }));
+		if (distant) liste.appendChild(PT.ligne("freeThis", function () {
+			Promise.all(manifestes.map(function (m, i) { return caches.delete(PSX_nomReserve(dossierDistant(dossiers[i]), m.size)); })).catch(function () {})
+				.then(function () { quitter("./"); });
+		}));
+		else liste.appendChild(PT.ligne("forgetDisc", function () { PSX_oublierDisque(jeu.id).then(function () { quitter(location.href); }); }));
 
 		$("menu-info").textContent = [PT.t("boot2d", { size: tailleMo() }), "BIOS " + (biosNom || "HLE"), jeu.serial, "PCSX-ReARMed"].join(" · ");
 	}
@@ -440,16 +507,20 @@
 		return n.replace(/ arrow$/, "").replace(/^./, function (c) { return c.toUpperCase(); });
 	}
 	function nomBouton(cle) { return /^[A-Z]/.test(cle) ? cle : PT.t(cle); }
+	function nomsTouches(i) { var c = commandes[0][i] || {}; return c.value2 ? nomPad(c.value2) + " / " + nomTouche(c.value) : nomTouche(c.value); }
 
 	function construireControles() {
 		var l = $("ctrl-liste"); l.innerHTML = "";
 		l.appendChild(PT.reglage({ t: "player", valeurs: [0, 1, 2, 3].map(function (p) { return { v: p, l: String(p + 1) }; }),
 			get: function () { return joueur; }, set: function (v) { joueur = v; dessinerControles(); } }));
 		BOUTONS.forEach(function (b) {
-			var r = PT.ligne(function () { return nomBouton(b[1]); }, function (el) { attendre(el, b[0]); }, function () {
+			var verrou = PREMIUM_BOUTONS.indexOf(b[0]) >= 0 && !premium;
+			var r = PT.ligne(function () { return nomBouton(b[1]); }, function (el) { if (verrou) return ouvrirPremium(); attendre(el, b[0]); }, function () {
+				if (verrou) return "Premium";
 				var c = commandes[joueur][b[0]] || {};
 				return nomPad(c.value2) + "  ·  " + (joueur === 0 || c.value ? nomTouche(c.value) : "—");
 			});
+			if (verrou) r.classList.add("premium");
 			r.classList.remove("act"); r.dataset.idx = b[0];
 			l.appendChild(r);
 		});
