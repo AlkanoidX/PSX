@@ -1,0 +1,10 @@
+# Game dumps: never commit
+*.bin
+*.cue
+*.iso
+*.img
+*.pbp
+*.chd
+*.zip
+*.7z
+*.crdownload
