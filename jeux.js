@@ -8,11 +8,14 @@
 //             (morceaux de 8 Mo 00000.bin… + disc.json). Le lecteur le télécharge et le garde
 //             dans le navigateur ; le joueur n'a rien à fournir.
 //             Sans ce champ, le joueur choisit son .bin au premier lancement (mémorisé ensuite).
-//   jaquette: (optionnel) chemin d'une image dans le dossier, ex. "jaquettes/DRV.jpg"
+//   jaquette: (optionnel) image du boîtier dans le dépôt PSX_DEPOT, ex. "DRV/cover.jpg" (jaquette IGDB du jeu PS1)
 window.PSX_JEUX = [
-	{ id: "SDW", titre: "Sheep, Dog 'n' Wolf", serial: "SLES_02895", annee: 2001, editeur: "Infogrames", genre: "Plates-formes", couleur: "#d9a21b", bios: "scph1001-us.bin", disque: "SDW/disc/" },
-	{ id: "DRV", titre: "Driver", serial: "SLES_01816", annee: 1999, editeur: "GT Interactive", genre: "Course / poursuite", couleur: "#b8322a", bios: "scph1001-us.bin", disque: "DRV/disc/" }
+	{ id: "SDW", titre: "Sheep, Dog 'n' Wolf", serial: "SLES_02895", annee: 2001, editeur: "Infogrames", genre: "Plates-formes", couleur: "#d9a21b", bios: "scph1001-us.bin", disque: "SDW/disc/", jaquette: "SDW/cover.jpg" },
+	{ id: "DRV", titre: "Driver", serial: "SLES_01816", annee: 1999, editeur: "GT Interactive", genre: "Course / poursuite", couleur: "#b8322a", bios: "scph1001-us.bin", disque: "DRV/disc/", jaquette: "DRV/cover.jpg" }
 ];
+
+// Bump with the ?v= stamps in index.html and jeu.html whenever a site or patched EmulatorJS file changes.
+window.PSX_VERSION = "20261121c";
 
 // PS1 disc repo: one folder per game (its initials), read straight from GitHub (CORS allowed).
 window.PSX_DEPOT = "https://raw.githubusercontent.com/AlkanoidX/ps1/main/";
@@ -56,7 +59,7 @@ window.PSX_boitier = function (jeu) {
 	el.style.setProperty("--couleur", jeu.couleur);
 	if (jeu.jaquette) {
 		var img = document.createElement("img");
-		img.src = jeu.jaquette; img.alt = jeu.titre; img.loading = "lazy";
+		img.src = new URL(jeu.jaquette, PSX_DEPOT).href; img.alt = jeu.titre; img.loading = "lazy";
 		el.appendChild(img);
 	} else {
 		var t = document.createElement("span");

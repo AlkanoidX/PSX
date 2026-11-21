@@ -1141,7 +1141,9 @@ class EmulatorJS {
             if (!this.gamepadLabels) return;
             for (let i = 0; i < this.gamepadSelection.length; i++) {
                 if (this.gamepadSelection[i] === "") {
-                    this.gamepadSelection[i] = this.gamepad.gamepads[e.gamepadIndex].id + "_" + this.gamepad.gamepads[e.gamepadIndex].index;
+                    // PlayTab fix: e.gamepadIndex is the browser's pad index, not a position in this.gamepad.gamepads
+                    const pad = this.gamepad.gamepads.find(g => g && g.index === e.gamepadIndex);
+                    if (pad) this.gamepadSelection[i] = pad.id + "_" + pad.index;
                     break;
                 }
             }
@@ -3349,9 +3351,16 @@ class EmulatorJS {
     }
     gamepadEvent(e) {
         if (!this.started) return;
-        const gamepadIndex = this.gamepadSelection.indexOf(this.gamepad.gamepads[e.gamepadIndex].id + "_" + this.gamepad.gamepads[e.gamepadIndex].index);
+        // PlayTab fix: find the pad by its browser index, and give an unassigned pad the first free player
+        const pad = this.gamepad.gamepads.find(g => g && g.index === e.gamepadIndex);
+        if (!pad) return;
+        const padKey = pad.id + "_" + pad.index;
+        let gamepadIndex = this.gamepadSelection.indexOf(padKey);
         if (gamepadIndex < 0) {
-            return; // Gamepad not set anywhere
+            gamepadIndex = this.gamepadSelection.indexOf("");
+            if (gamepadIndex < 0) return; // every player already has a pad
+            this.gamepadSelection[gamepadIndex] = padKey;
+            this.updateGamepadLabels();
         }
         const value = function (value) {
             if (value > 0.5 || value < -0.5) {

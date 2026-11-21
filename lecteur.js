@@ -211,7 +211,9 @@
 			emu.isPopupOpen = function () { return menuOuvert || popup(); };
 		};
 		window.EJS_onGameStart = function () { etape(1, "fini"); etape(2, "fini"); etape(3, "encours"); };
-		var s = document.createElement("script"); s.src = "data/loader.js"; document.body.appendChild(s);
+		// Version stamp on files we patch, so the Cloudflare cache in front of the FTP serves the new ones.
+		window.EJS_paths = { "emulator.js": "data/src/emulator.js?v=" + PSX_VERSION };
+		var s = document.createElement("script"); s.src = "data/loader.js?v=" + PSX_VERSION; document.body.appendChild(s);
 
 		var debut = performance.now(), bon = 0, avant = 0, tAvant = debut;
 		var suivi = setInterval(function () {
