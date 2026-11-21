@@ -218,7 +218,8 @@
 			await flux[0].prechauffer(premiers);
 			flux[0].surProgres = null;
 			barre.classList.add("busy");
-			var noms = flux.map(function (f, i) { return jeu.id + (flux.length > 1 ? "-" + (i + 1) : "") + ".bin"; });
+			// File names keep the disc's type (.chd or .bin, from its disc.json), which the core goes by.
+			var noms = flux.map(function (f, i) { return jeu.id + (flux.length > 1 ? "-" + (i + 1) : "") + "." + (manifestes[i].name.split(".").pop() || "bin").toLowerCase(); });
 			window.EJS_gameStream = function (FS) {
 				flux.forEach(function (f, i) { PSX_fichierFlux(FS, "/" + noms[i], f); });
 				if (flux.length === 1) return noms[0];
