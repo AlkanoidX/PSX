@@ -4,6 +4,9 @@
 //   serial  : identifiant du disque (volume ID, ex. SLES_01816) pour vérifier que le joueur charge le bon jeu
 //   couleur : couleur de la carte dans le catalogue
 //   bios    : fichier BIOS à utiliser pour ce jeu (dans bios/), chargé automatiquement
+//   disque  : (optionnel) adresse du disque, hébergé par toi : un .cue (toutes ses pistes, son CD compris)
+//             ou un .bin/.iso seul. Le lecteur le charge tout seul, le joueur n'a rien à fournir.
+//             Sans ce champ, le joueur choisit son .bin au premier lancement (mémorisé ensuite).
 //   jaquette: (optionnel) chemin d'une image dans le dossier, ex. "jaquettes/DRV.jpg"
 window.PSX_JEUX = [
 	{ id: "SDW", titre: "Sheep, Dog 'n' Wolf", serial: "SLES_02895", annee: 2001, editeur: "Infogrames", genre: "Plates-formes", couleur: "#d9a21b", bios: "scph1001-us.bin" },

@@ -10,6 +10,8 @@
 	var TACTILE = matchMedia("(pointer: coarse)").matches;
 	var TAILLE_BIOS = 512 * 1024, TAILLE_CARTE = 128 * 1024;
 	var disque = null, bios = null, biosNom = "", emu = null, enJeu = false, menuOuvert = false;
+	var distant = !!jeu.disque;   // adresse du disque (.cue ou .bin) dans jeux.js : le joueur n'a rien à fournir
+	function tailleMo() { return disque ? PT.nombre(disque.size / 1048576, 0) : "…"; }
 
 	document.title = jeu.titre;
 	$("titre").textContent = jeu.titre;
@@ -83,10 +85,10 @@
 		// Le cœur et le BIOS se chargent pendant qu'on lit le disque mémorisé.
 		var coeur = fetch("data/cores/pcsx_rearmed-wasm.data").catch(function () {});
 		var b = biosServeur();
-		try { disque = await PSX_lireDisque(jeu.id); } catch (e) { disque = null; }
+		if (!distant) { try { disque = await PSX_lireDisque(jeu.id); } catch (e) { disque = null; } }
 		bios = await b; await coeur;
 		$("charge").hidden = true;
-		if (!disque) return demanderDisque();
+		if (!distant && !disque) return demanderDisque();
 		boutonJouer("play", true);
 		PT.focaliser($("jouer"));
 	}
@@ -101,7 +103,7 @@
 
 	$("jouer").addEventListener("click", function () {
 		if ($("jouer").disabled) return;
-		if (!disque) return $("f-disque").click();
+		if (!distant && !disque) return $("f-disque").click();
 		lancer();
 	});
 
@@ -128,18 +130,37 @@
 		if (detail !== undefined) $("e" + n + "d").textContent = detail;
 	}
 
-	function lancer() {
+	// Disque distant : le .cue liste les pistes (FILE "x.bin"), toutes chargées pour que le son CD joue.
+	async function preparerDisqueDistant() {
+		var cue = new URL(jeu.disque, location.href);
+		var externes = {};
+		if (/\.cue$/i.test(cue.pathname)) {
+			var txt = await (await fetch(cue.href)).text();
+			txt.replace(/FILE\s+"([^"]+)"/gi, function (m, nom) { externes["/" + nom] = new URL(encodeURI(nom), cue).href; return m; });
+		}
+		return { url: cue.href, externes: externes };
+	}
+
+	async function lancer() {
 		PT.ecran(null);
 		$("overlay").classList.add("parti");
 		$("boot").hidden = false;
 		etape(1, "encours", bios ? PT.t("boot1d", { bios: biosNom }) : PT.t("boot1dHle"));
-		etape(2, "", PT.t("boot2d", { size: PT.nombre(disque.size / 1048576, 0) }));
+		etape(2, "", distant ? "" : PT.t("boot2d", { size: tailleMo() }));
 		etape(3, "", "");
+		var source = disque;
+		if (distant) {
+			try {
+				var d = await preparerDisqueDistant();
+				source = d.url;
+				window.EJS_externalFiles = d.externes;
+			} catch (e) { return arret("disc: " + e); }
+		}
 
 		window.EJS_player = "#game";
 		window.EJS_core = "pcsx_rearmed";
 		window.EJS_pathtodata = "data/";
-		window.EJS_gameUrl = disque;
+		window.EJS_gameUrl = source;
 		if (bios) window.EJS_biosUrl = new File([bios], "scph5501.bin"); // nom attendu par le cœur
 		window.EJS_gameName = jeu.id;                // clé de la carte mémoire dans le navigateur
 		window.EJS_startOnLoaded = true;
@@ -347,9 +368,9 @@
 
 		liste.appendChild(titre("game"));
 		liste.appendChild(PT.ligne("catalog", function () { quitter("./"); }));
-		liste.appendChild(PT.ligne("forgetDisc", function () { PSX_oublierDisque(jeu.id).then(function () { quitter(location.href); }); }));
+		if (!distant) liste.appendChild(PT.ligne("forgetDisc", function () { PSX_oublierDisque(jeu.id).then(function () { quitter(location.href); }); }));
 
-		$("menu-info").textContent = [PT.t("boot2d", { size: PT.nombre(disque.size / 1048576, 0) }), "BIOS " + (biosNom || "HLE"), jeu.serial, "PCSX-ReARMed"].join(" · ");
+		$("menu-info").textContent = [PT.t("boot2d", { size: tailleMo() }), "BIOS " + (biosNom || "HLE"), jeu.serial, "PCSX-ReARMed"].join(" · ");
 	}
 
 	function ouvrirMenu() {
@@ -484,7 +505,7 @@
 		setTimeout(function () { PT.capture = false; }, 200);
 	}
 
-	PT.surLangue(function () { document.title = jeu.titre; if (liste.children.length) $("menu-info").textContent = [PT.t("boot2d", { size: PT.nombre(disque.size / 1048576, 0) }), "BIOS " + (biosNom || "HLE"), jeu.serial, "PCSX-ReARMed"].join(" · "); });
+	PT.surLangue(function () { document.title = jeu.titre; if (liste.children.length) $("menu-info").textContent = [PT.t("boot2d", { size: tailleMo() }), "BIOS " + (biosNom || "HLE"), jeu.serial, "PCSX-ReARMed"].join(" · "); });
 
 	if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", preparer); else preparer();
 })();

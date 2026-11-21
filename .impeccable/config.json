@@ -20,6 +20,24 @@
         ],
         "createdAt": "2026-11-21T09:36:55.527Z",
         "reason": "PlayTab charter D:/PS2 RECOMP/PAGE_DESIGN.md sections 4.1/4.4/5.1 mandate the green focus halo, glowing progress bar and title text-shadow (frozen design reference the user requires)"
+      },
+      {
+        "rule": "marquee",
+        "value": "*",
+        "files": [
+          "index.html"
+        ],
+        "createdAt": "2026-11-21T09:43:10.977Z",
+        "reason": "False positive: no auto-scrolling content; the carousel only moves on user input and the busy bar/grain come from PAGE_DESIGN.md (Claude, after checking the code)"
+      },
+      {
+        "rule": "marquee",
+        "value": "*",
+        "files": [
+          "jeu.html"
+        ],
+        "createdAt": "2026-11-21T09:43:11.185Z",
+        "reason": "False positive: no auto-scrolling content; the carousel only moves on user input and the busy bar/grain come from PAGE_DESIGN.md (Claude, after checking the code)"
       }
     ]
   }
