@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>PSX</title>
+<link rel="stylesheet" href="psx.css">
+<style>
+	html, body { height: 100%; margin: 0; background: #000; overflow: hidden; }
+	#game { position: fixed; inset: 0; }
+	.ecran { position: fixed; inset: 0; z-index: 10; display: flex; align-items: center; justify-content: center; padding: 24px;
+		background: radial-gradient(120% 90% at 50% 0%, color-mix(in srgb, var(--couleur, #3b4cc0) 35%, #0b0d14) 0%, #06070b 70%); }
+	.ecran[hidden] { display: none; }
+	.carte { width: min(460px, 100%); text-align: center; }
+	.carte .boitier { margin: 0 auto 28px; width: 180px; }
+	.carte h1 { font-size: clamp(26px, 5vw, 36px); margin: 0 0 6px; letter-spacing: -0.01em; }
+	.carte .meta { color: var(--texte-2); margin: 0 0 28px; font-size: 15px; }
+	.carte p.aide { color: var(--texte-2); font-size: 14px; line-height: 1.5; margin: 18px 0 0; }
+	.carte p.erreur { color: #ff8a80; font-size: 14px; line-height: 1.5; margin: 18px 0 0; min-height: 1.5em; }
+	.statut { color: var(--texte-2); font-size: 15px; }
+	.retour { position: fixed; top: 14px; left: 14px; z-index: 20; }
+	body.en-jeu .retour { opacity: 0; transition: opacity .3s; }
+	body.en-jeu.souris .retour { opacity: 1; }
+	input[type=file] { display: none; }
+</style>
+</head>
+<body>
+	<a class="bouton fantome retour" href="./" title="Retour au catalogue (bouton Home de la manette)">&larr; Catalogue</a>
+
+	<div class="ecran" id="ecran">
+		<div class="carte">
+			<div class="boitier" id="boitier"></div>
+			<h1 id="titre">&nbsp;</h1>
+			<p class="meta" id="meta">&nbsp;</p>
+			<div id="zone-statut" class="statut">Chargement…</div>
+			<div id="zone-disque" hidden>
+				<button class="bouton principal" id="choisir"><span class="sym croix">&#x2715;</span> Insérer le disque</button>
+				<p class="aide">Choisis le fichier <b>.bin</b> de ton jeu. Il est vérifié puis gardé dans ce navigateur&nbsp;: la prochaine fois, le jeu se lance directement.</p>
+				<p class="erreur" id="erreur"></p>
+				<input type="file" id="fichier" accept=".bin,.img,.iso">
+			</div>
+		</div>
+	</div>
+
+	<div id="game"></div>
+
+	<script src="jeux.js"></script>
+	<script src="manette.js"></script>
+	<script src="disques.js"></script>
+	<script>
+	(function () {
+		var id = PSX_idDansUrl();
+		var jeu = PSX_trouverJeu(id);
+		if (!jeu) { location.replace("./"); return; }
+
+		var $ = function (i) { return document.getElementById(i); };
+		document.title = jeu.titre + " — PSX";
+		document.documentElement.style.setProperty("--couleur", jeu.couleur);
+		$("titre").textContent = jeu.titre;
+		$("meta").textContent = [jeu.annee, jeu.editeur, jeu.genre].filter(Boolean).join(" · ");
+		$("boitier").appendChild(PSX_boitier(jeu));
+
+		var TAILLE_BIOS = 512 * 1024;
+
+		function afficher(zone) {
+			["zone-statut", "zone-disque"].forEach(function (z) { $(z).hidden = z !== zone; });
+		}
+		function statut(t) { afficher("zone-statut"); $("zone-statut").textContent = t; }
+		function demanderDisque(erreur) { afficher("zone-disque"); $("erreur").textContent = erreur || ""; $("choisir").focus(); }
+
+		// BIOS posé sur le serveur (PSX_BIOS dans jeux.js), pour tous les jeux. Absent : BIOS simulé du cœur.
+		async function biosServeur() {
+			try {
+				var r = await fetch(PSX_BIOS, { cache: "force-cache" });
+				if (!r.ok) return null;
+				var b = await r.blob();
+				return b.size === TAILLE_BIOS ? b : null;
+			} catch (e) { return null; }
+		}
+
+		async function demarrer() {
+			var disque = null;
+			try { disque = await PSX_lireDisque(jeu.id); } catch (e) {}
+			if (!disque) return demanderDisque();
+			lancer(disque, await biosServeur());
+		}
+
+		function lancer(fichier, bios) {
+			statut("Démarrage…");
+			window.EJS_player = "#game";
+			window.EJS_core = "pcsx_rearmed";
+			window.EJS_pathtodata = "data/";
+			window.EJS_gameUrl = fichier;
+			// Le cœur cherche le BIOS sous un nom connu.
+			if (bios) window.EJS_biosUrl = new File([bios], "scph5501.bin");
+			window.EJS_gameName = jeu.id;          // clé des sauvegardes (carte mémoire) dans le navigateur
+			window.EJS_startOnLoaded = true;
+			window.EJS_threads = false;
+			window.EJS_color = jeu.couleur;
+			window.EJS_backgroundColor = "#000000";
+			window.EJS_defaultOptions = { "save-save-interval": "30" };
+			window.EJS_DEBUG_XX = true;            // charge data/src/*.js (pas de build minifié)
+			window.EJS_ready = function () {
+				$("ecran").hidden = true; document.body.classList.add("en-jeu");
+				// Manettes en DualShock (sticks analogiques) par défaut ; modifiable dans le menu du jeu.
+				// "ready" arrive avant la lecture de la config du cœur, qui remplit retroarchOpts.
+				var types = { "517": "DualShock (analogique)", "1": "Manette standard (digitale)" };
+				var manettes = [1, 2].map(function (p) {
+					return { title: "Manette " + p, name: "input_libretro_device_p" + p, options: types, default: "517", isString: true };
+				});
+				var emu = window.EJS_emulator, opts = emu.retroarchOpts;
+				Object.defineProperty(emu, "retroarchOpts", { configurable: true,
+					get: function () { return opts; },
+					set: function (v) { opts = (Array.isArray(v) ? v : []).concat(manettes); } });
+			};
+			var s = document.createElement("script");
+			s.src = "data/loader.js";
+			document.body.appendChild(s);
+		}
+
+		$("choisir").addEventListener("click", function () { $("fichier").click(); });
+		$("fichier").addEventListener("change", async function (e) {
+			var f = e.target.files[0];
+			e.target.value = "";
+			if (!f) return;
+			statut("Vérification du disque…");
+			var serial = await PSX_serialDuDisque(f);
+			if (serial !== jeu.serial) {
+				demanderDisque(serial
+					? "Ce disque est " + (PSX_jeuParSerial(serial) ? PSX_jeuParSerial(serial).titre + " (" + serial + ")" : serial) + ", pas " + jeu.titre + "."
+					: "Ce fichier n'est pas un disque PlayStation lisible (.bin attendu).");
+				return;
+			}
+			statut("Mémorisation du disque…");
+			await PSX_garderDisque(jeu.id, f);
+			demarrer();
+		});
+
+
+		// Retour au catalogue : bouton Home, ou Select + Start maintenus 1 s.
+		var minuteur = null;
+		PSXPad.surBouton(function (nom, appuye) {
+			if (nom === "home" && appuye) location.href = "./";
+			if (nom === "select" || nom === "start") {
+				clearTimeout(minuteur);
+				if (PSXPad.estAppuye("select") && PSXPad.estAppuye("start")) minuteur = setTimeout(function () { location.href = "./"; }, 1000);
+			}
+		});
+
+		var cache;
+		document.addEventListener("mousemove", function () {
+			document.body.classList.add("souris");
+			clearTimeout(cache);
+			cache = setTimeout(function () { document.body.classList.remove("souris"); }, 2000);
+		});
+
+		demarrer();
+	})();
+	</script>
+</body>
+</html>

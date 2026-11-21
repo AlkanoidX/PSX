@@ -1,0 +1,65 @@
+:root {
+	--fond: #06070b;
+	--texte: #f2f3f7;
+	--texte-2: #a3a8b8;
+	--ligne: rgba(255, 255, 255, 0.12);
+	--croix: #7aa7ff;
+	--rond: #ff6b6b;
+	--triangle: #3ed6a0;
+	--carre: #ff8ad8;
+	color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+	margin: 0; background: var(--fond); color: var(--texte);
+	font-family: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+	-webkit-font-smoothing: antialiased;
+}
+
+.sym { display: inline-block; font-weight: 700; }
+.sym.croix { color: var(--croix); }
+.sym.rond { color: var(--rond); }
+.sym.triangle { color: var(--triangle); }
+.sym.carre { color: var(--carre); }
+
+.bouton {
+	display: inline-flex; align-items: center; gap: 10px;
+	font: inherit; font-size: 16px; font-weight: 600; text-decoration: none; color: var(--texte);
+	padding: 12px 22px; border-radius: 999px; border: 1px solid var(--ligne);
+	background: rgba(255, 255, 255, 0.06); cursor: pointer;
+	transition: background .15s, border-color .15s, transform .15s;
+}
+.bouton:hover { background: rgba(255, 255, 255, 0.12); }
+.bouton:focus-visible { outline: 2px solid var(--texte); outline-offset: 3px; }
+.bouton.principal { background: var(--texte); color: #0b0d14; border-color: transparent; }
+.bouton.principal .sym.croix { color: #2a5bd7; }
+.bouton.principal:hover { background: #fff; transform: translateY(-1px); }
+.bouton.fantome { padding: 8px 14px; font-size: 14px; background: rgba(0, 0, 0, 0.45); backdrop-filter: blur(8px); }
+
+/* Boîtier de jeu (format CD PlayStation, presque carré) */
+.boitier-jeu {
+	--couleur: #3b4cc0;
+	position: relative; aspect-ratio: 1 / 1.03; width: 100%; border-radius: 6px; overflow: hidden;
+	background:
+		linear-gradient(160deg, rgba(255,255,255,.22), rgba(255,255,255,0) 40%),
+		linear-gradient(200deg, var(--couleur), color-mix(in srgb, var(--couleur) 45%, #000));
+	box-shadow: 0 1px 0 rgba(255,255,255,.25) inset, 0 18px 40px rgba(0,0,0,.55);
+	padding-left: 13%;
+}
+.boitier-jeu::before { /* tranche noire à gauche, comme les boîtiers PS1 */
+	content: "PSX"; position: absolute; inset: 0 auto 0 0; width: 13%;
+	background: #0d0e12; color: rgba(255,255,255,.75);
+	writing-mode: vertical-rl; transform: rotate(180deg);
+	display: flex; align-items: center; justify-content: flex-end; padding: 10px 0;
+	font-size: clamp(8px, 1.1vw, 12px); font-weight: 800; letter-spacing: .3em;
+}
+.boitier-jeu img { position: absolute; inset: 0 0 0 13%; width: 87%; height: 100%; object-fit: cover; }
+.boitier-titre {
+	position: absolute; left: 13%; right: 0; bottom: 0; padding: 0 9% 11% 9%;
+	font-size: clamp(15px, 2.2vw, 24px); font-weight: 800; line-height: 1.05; letter-spacing: -0.01em;
+	text-shadow: 0 2px 12px rgba(0,0,0,.35); text-wrap: balance;
+}
+.boitier-serial {
+	position: absolute; top: 8%; right: 8%;
+	font-size: clamp(8px, .9vw, 11px); font-weight: 600; letter-spacing: .08em; color: rgba(255,255,255,.7);
+}

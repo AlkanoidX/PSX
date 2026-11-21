@@ -1,23 +1,10 @@
-# PlayStation
+# PSX
 
-PlayStation Emulator in JavaScript and WebAssembly.
+Catalogue et lanceur de jeux PlayStation 1 dans le navigateur, sur EmulatorJS (cœur PCSX-ReARMed, GPL-3.0).
 
-![alt screenshot](https://raw.githubusercontent.com/lrusso/PlayStation/main/PlayStation.png)
+- `index.html` : catalogue façon console de salon (clavier, souris, tactile, manette).
+- `?ID` (ex. `?DRV`) : lance directement le jeu.
+- `jeux.js` : liste des jeux (une ligne par jeu) et chemin du BIOS serveur.
+- `data/` : EmulatorJS 4.2.3 + cœur pcsx_rearmed.
 
-## Web:
-
-https://lrusso.github.io/PlayStation/PlayStation.htm
-
-## Main differences with WasmPSX:
-
-* Sound working.
-* Mute/unmute implementation.
-* The rendering fills the entire window.
-* File format validation.
-* Improved main screen.
-* Icons added for all the available options.
-* Internationalization (English and Spanish).
-
-## Based on the work of:
-
-https://github.com/js-emulators/wasmpsx
+Aucun jeu ni BIOS n'est dans ce dépôt.

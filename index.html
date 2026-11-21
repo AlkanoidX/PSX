@@ -1,11 +1,153 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="fr">
 <head>
 <meta charset="UTF-8">
-<title>PlayStation</title>
-<meta http-equiv="refresh" content="0; url=PlayStation.htm">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>PSX — Jeux PlayStation</title>
+<script src="jeux.js"></script>
+<script>
+	// "…/PSX/?DRV" lance directement le jeu.
+	if (PSX_idDansUrl()) location.replace("jeu.html?" + encodeURIComponent(PSX_idDansUrl()));
+</script>
+<link rel="stylesheet" href="psx.css">
+<style>
+	html, body { height: 100%; }
+	body { overflow: hidden; display: flex; flex-direction: column; user-select: none; }
+	.halo { position: fixed; inset: 0; z-index: -1; transition: background .6s ease;
+		background: radial-gradient(90% 70% at 50% 38%, color-mix(in srgb, var(--couleur, #3b4cc0) 30%, transparent) 0%, transparent 70%), var(--fond); }
+
+	header { display: flex; align-items: center; justify-content: space-between; padding: 22px clamp(16px, 4vw, 48px); }
+	.marque { display: flex; align-items: center; gap: 14px; font-weight: 800; font-size: 22px; letter-spacing: .14em; }
+	.marque .syms { display: flex; gap: 6px; font-size: 15px; letter-spacing: 0; }
+	.infos { color: var(--texte-2); font-size: 15px; display: flex; gap: 22px; font-variant-numeric: tabular-nums; }
+
+	main { flex: 1; display: flex; flex-direction: column; justify-content: center; min-height: 0; }
+	.rail { position: relative; height: calc(var(--taille) * 1.03 * 1.12 + 40px); --taille: clamp(150px, 22vw, 260px); --pas: calc(var(--taille) + clamp(18px, 2.4vw, 34px)); overflow: hidden; }
+	.piste { position: absolute; top: 20px; left: 50%; display: flex; gap: calc(var(--pas) - var(--taille)); transition: transform .45s cubic-bezier(.2,.8,.2,1); }
+	.piste button { all: unset; width: var(--taille); cursor: pointer; transition: transform .45s cubic-bezier(.2,.8,.2,1), opacity .3s, filter .3s;
+		transform-origin: 50% 60%; opacity: .45; filter: saturate(.6); }
+	.piste button.actif { transform: scale(1.12); opacity: 1; filter: none; }
+	.piste button.actif .boitier-jeu { box-shadow: 0 0 0 2px rgba(255,255,255,.85), 0 24px 60px rgba(0,0,0,.6); }
+	.piste button:focus-visible .boitier-jeu { outline: 3px solid #fff; outline-offset: 4px; }
+
+	.fiche { text-align: center; padding: 26px 16px 0; min-height: 170px; }
+	.fiche h1 { margin: 0 0 6px; font-size: clamp(26px, 4vw, 44px); letter-spacing: -0.02em; }
+	.fiche .meta { margin: 0 0 22px; color: var(--texte-2); font-size: 16px; }
+	.fiche .etat { display: block; margin-top: 14px; font-size: 13px; color: var(--texte-2); min-height: 1.2em; }
+
+	footer { display: flex; justify-content: center; gap: clamp(16px, 3vw, 36px); flex-wrap: wrap; padding: 18px 16px 26px; color: var(--texte-2); font-size: 14px; border-top: 1px solid var(--ligne); }
+	footer kbd { font: inherit; font-weight: 700; color: var(--texte); }
+	.vide { text-align: center; color: var(--texte-2); }
+
+	@media (max-width: 600px) {
+		.infos .nb { display: none; }
+		.fiche { min-height: 150px; }
+		footer .clavier { display: none; }
+	}
+	@media (prefers-reduced-motion: reduce) { .piste, .piste button, .halo { transition: none; } }
+</style>
 </head>
-<body style="background:#000">
-<a href="PlayStation.htm" style="color:#fff">PlayStation</a>
+<body>
+	<div class="halo" id="halo"></div>
+	<header>
+		<div class="marque">PSX <span class="syms" aria-hidden="true"><span class="sym triangle">&#x25B3;</span><span class="sym rond">&#x25CB;</span><span class="sym croix">&#x2715;</span><span class="sym carre">&#x25A1;</span></span></div>
+		<div class="infos"><span class="nb" id="nb"></span><span id="heure"></span></div>
+	</header>
+
+	<main>
+		<div class="rail" id="rail"><div class="piste" id="piste" role="listbox" aria-label="Jeux disponibles"></div></div>
+		<section class="fiche" aria-live="polite">
+			<h1 id="titre"></h1>
+			<p class="meta" id="meta"></p>
+			<a class="bouton principal" id="jouer" href="#"><span class="sym croix">&#x2715;</span> Jouer</a>
+			<span class="etat" id="etat"></span>
+		</section>
+	</main>
+
+	<footer>
+		<span><span class="sym">&#x25C0; &#x25B6;</span> Choisir</span>
+		<span><span class="sym croix">&#x2715;</span> Jouer</span>
+		<span class="clavier"><kbd>&larr; &rarr;</kbd> / <kbd>Entrée</kbd> au clavier</span>
+	</footer>
+
+	<script src="manette.js"></script>
+	<script src="disques.js"></script>
+	<script>
+	(function () {
+		var jeux = PSX_JEUX.slice();
+		var $ = function (i) { return document.getElementById(i); };
+		var piste = $("piste"), boutons = [], index = 0;
+
+		$("nb").textContent = jeux.length + (jeux.length > 1 ? " jeux" : " jeu");
+		function heure() { var d = new Date(); $("heure").textContent = String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0"); }
+		heure(); setInterval(heure, 10000);
+
+		if (!jeux.length) { document.querySelector("main").innerHTML = '<p class="vide">Aucun jeu pour l\'instant.</p>'; return; }
+
+		function url(j) { return "jeu.html?" + j.id; }
+
+		jeux.forEach(function (j, i) {
+			var b = document.createElement("button");
+			b.setAttribute("role", "option");
+			b.setAttribute("aria-label", j.titre);
+			b.appendChild(PSX_boitier(j));
+			b.addEventListener("click", function () { if (i === index) location.href = url(j); else choisir(i); });
+			piste.appendChild(b);
+			boutons.push(b);
+		});
+
+		try { var dernier = sessionStorage.getItem("psx-dernier"); if (dernier) index = Math.max(0, jeux.findIndex(function (j) { return j.id === dernier; })); } catch (e) {}
+
+		function choisir(i) {
+			index = (i + jeux.length) % jeux.length;
+			var j = jeux[index];
+			boutons.forEach(function (b, k) { b.classList.toggle("actif", k === index); b.setAttribute("aria-selected", k === index); });
+			var pas = boutons.length > 1 ? boutons[1].offsetLeft - boutons[0].offsetLeft : 0;
+			piste.style.transform = "translateX(" + (-(index * pas) - boutons[0].offsetWidth / 2) + "px)";
+			document.documentElement.style.setProperty("--couleur", j.couleur);
+			$("titre").textContent = j.titre;
+			$("meta").textContent = [j.annee, j.editeur, j.genre].filter(Boolean).join(" · ");
+			$("jouer").href = url(j);
+			$("etat").textContent = "";
+			PSX_lireDisque(j.id).then(function (f) {
+				if (jeux[index] === j) $("etat").textContent = f ? "Disque mémorisé — lancement direct" : "Disque à insérer au premier lancement";
+			}, function () {});
+			try { sessionStorage.setItem("psx-dernier", j.id); } catch (e) {}
+		}
+
+		document.addEventListener("keydown", function (e) {
+			if (e.key === "ArrowRight") { choisir(index + 1); e.preventDefault(); }
+			else if (e.key === "ArrowLeft") { choisir(index - 1); e.preventDefault(); }
+			else if (e.key === "Enter" || e.key === " ") { location.href = url(jeux[index]); e.preventDefault(); }
+		});
+
+		// Manette : croix / stick pour choisir (répétition si maintenu), ✕ ou Start pour jouer.
+		var repete = null;
+		PSXPad.surBouton(function (nom, appuye) {
+			if (nom === "gauche" || nom === "droite") {
+				clearInterval(repete);
+				if (appuye) {
+					var d = nom === "droite" ? 1 : -1;
+					choisir(index + d);
+					var debut = Date.now();
+					repete = setInterval(function () { if (Date.now() - debut > 400) choisir(index + d); }, 140);
+				}
+			}
+			if (appuye && (nom === "croix" || nom === "start")) location.href = url(jeux[index]);
+		});
+
+		// Glisser au doigt
+		var x0 = null;
+		$("rail").addEventListener("touchstart", function (e) { x0 = e.touches[0].clientX; }, { passive: true });
+		$("rail").addEventListener("touchend", function (e) {
+			if (x0 === null) return;
+			var dx = e.changedTouches[0].clientX - x0; x0 = null;
+			if (Math.abs(dx) > 40) choisir(index + (dx < 0 ? 1 : -1));
+		});
+
+		addEventListener("resize", function () { choisir(index); });
+		choisir(index);
+	})();
+	</script>
 </body>
 </html>
