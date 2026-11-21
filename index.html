@@ -7,12 +7,12 @@
 <meta name="robots" content="noindex">
 <link rel="icon" href="data:,">
 <title>PlayStation</title>
-<script src="jeux.js"></script>
+<script src="jeux.js?v=20261121b"></script>
 <script>
 	// "…/PSX/?DRV" lance directement le jeu.
 	if (PSX_idDansUrl()) location.replace("jeu.html?" + encodeURIComponent(PSX_idDansUrl()) + location.hash);
 </script>
-<link rel="stylesheet" href="playtab.css">
+<link rel="stylesheet" href="playtab.css?v=20261121b">
 <style>
 	body { display: flex; flex-direction: column; position: relative;
 		background: radial-gradient(60% 60% at 50% 45%, #10241a 0%, var(--bg) 70%); }
@@ -64,9 +64,9 @@
 		<a class="btn is-primary is-xl f" id="jouer" href="#" tabindex="-1" data-t="play">Play</a>
 	</section>
 
-	<script src="textes.js"></script>
-	<script src="playtab.js"></script>
-	<script src="disques.js"></script>
+	<script src="textes.js?v=20261121b"></script>
+	<script src="playtab.js?v=20261121b"></script>
+	<script src="disques.js?v=20261121b"></script>
 	<script>
 	(function () {
 		var jeux = PSX_JEUX.slice(), $ = function (i) { return document.getElementById(i); };
